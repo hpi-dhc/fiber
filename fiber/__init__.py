@@ -1,5 +1,5 @@
-'''Top-level package for FIBER.'''
+import os
 
-__author__ = '''HPI FIBER Team'''
-__email__ = 'philipp.bode@student.hpi.de'
-__version__ = '0.1.0'
+__author__ = 'HPI FIBER Team'
+
+CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache')
