@@ -4,11 +4,7 @@ import pandas as pd
 from sqlalchemy import orm, sql
 
 from fiber.condition.base import BaseCondition
-from fiber.database.table import (
-    filter_by,
-    Table,
-    d_pers,
-)
+from fiber.database.table import Table
 
 from fiber.database.hana import session_scope, compile_sqla
 
@@ -23,7 +19,7 @@ class DatabaseCondition(BaseCondition):
         columns=None,
     ):
         # sql.true() acts as an 'empty' initializer for the clause
-        self._mrns = mrns or set()
+        self._cached_mrns = mrns or set()
         self.dimensions = dimensions or set()
         self.clause = sql.true() if clause is None else clause
         self._specified_columns = columns or set()
@@ -38,7 +34,7 @@ class DatabaseCondition(BaseCondition):
         """
         raise NotImplementedError
 
-    def base_query(self) -> orm.Query:
+    def create_query(self) -> orm.Query:
         """Should return an instance of a base query.
 
         This base query should yield all medical record numbers in the
@@ -53,37 +49,30 @@ class DatabaseCondition(BaseCondition):
 
     def _fetch_mrns(self):
         with session_scope() as session:
-            q = self.base_query()
-            q = filter_by(q, self)
+            q = self.create_query()
 
             q = q.with_session(session)
 
             print(f'Executing: {compile_sqla(q)}')
             return set(mrn[0] for mrn in q.all())
 
-    def _fetch_data(self, mrn_constraint_clause):
+    def get_data(self, inclusion_mrns):
         with session_scope() as session:
-            q = self.base_query()
-            q = filter_by(q, self).filter(mrn_constraint_clause)
+            q = self.create_query()
+            q = q.filter(self.mrn_filter(inclusion_mrns))
             q = q.with_entities(*self.columns).distinct()
             print(f'Executing: {compile_sqla(q)}')
 
             return pd.read_sql(q.statement, session.connection())
 
-    @property
-    def mrn_clause(self):
-        if self.already_executed:
-            return d_pers.MEDICAL_RECORD_NUMBER.in_(self.mrns)
-        else:
-            q = self.base_query()
-            q = filter_by(q, self)
-
-            return d_pers.MEDICAL_RECORD_NUMBER.in_(q)
+    def mrn_filter(self, mrns):
+        """Returns a clause that restricts the query to a set of mrns."""
+        raise NotImplementedError
 
     def __or__(self, other):
         if (
             self.base_table == other.base_table
-            and not (self.already_executed or other.already_executed)
+            and not (self._cached_mrns or other._cached_mrns)
         ):
             return self.__class__(
                 mrns=None,
@@ -92,17 +81,17 @@ class DatabaseCondition(BaseCondition):
                 columns=self.columns | other.columns,
             )
         else:
-            return BaseCondition(mrns=self.mrns | other.mrns)
+            return BaseCondition(mrns=self.get_mrns() | other.get_mrns())
 
     def __and__(self, other):
         return self.__class__(
-            mrns=self.mrns & other.mrns,
+            mrns=self.get_mrns() & other.get_mrns(),
             dimensions=self.dimensions | other.dimensions,
         )
 
     def __repr__(self):
-        if self.already_executed:
-            return f'{self.__class__.__name__}: {len(self._mrns)} patients'
+        if self._cached_mrns:
+            return f'{self.__class__.__name__}: {len(self.get_mrns())} mrns'
         else:
             return (
                 f'{self.__class__.__name__}: '

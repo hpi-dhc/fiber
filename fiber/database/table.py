@@ -1,4 +1,3 @@
-from sqlalchemy.orm import Query
 from sqlalchemy.sql.schema import Table as SQLATable
 
 from fiber.database.hana import get_meta
@@ -52,37 +51,37 @@ b_mat = Table('B_MATERIAL')
 fd_mat = Table('FD_MATERIAL')
 
 d_pers = Table('D_PERSON')
+d_enc = Table('D_ENCOUNTER')
 
 dimensions = {
     'PROCEDURE': (fd_proc, b_proc),
     'MATERIAL': (fd_mat, b_mat),
     'DIAGNOSIS': (fd_diag, b_diag),
+    'ENCOUNTER': (d_enc, None),
 }
 
 
-def fact_query():
-    return Query(fact).join(
-        d_pers,
-        fact.person_key == d_pers.person_key
-    ).with_entities(
-            d_pers.MEDICAL_RECORD_NUMBER
-    ).distinct()
-
-
+# (TODO) Move to FactConditionand and refactor
 def join_dimension(query, dim):
     assert dim in dimensions
     d_table, b_table = dimensions[dim]
-
     key = f'{dim}_key'
-    group_key = f'{dim}_group_key'
 
-    return query.join(
-        b_table,
-        getattr(fact, group_key) == getattr(b_table, group_key)
-    ).join(
-        d_table,
-        getattr(d_table, key) == getattr(b_table, key)
-    )
+    if b_table is None:
+        return query.join(
+            d_table,
+            getattr(d_table, key) == getattr(b_table, key)
+        )
+    else:
+        group_key = f'{dim}_group_key'
+
+        return query.join(
+            b_table,
+            getattr(fact, group_key) == getattr(b_table, group_key)
+        ).join(
+            d_table,
+            getattr(d_table, key) == getattr(b_table, key)
+        )
 
 
 def filter_by(query, condition):
