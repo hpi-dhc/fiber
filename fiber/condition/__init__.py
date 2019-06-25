@@ -1,5 +1,5 @@
 from .database import DatabaseCondition
-from .fact_dimensions import (
+from .fact import (
     Diagnosis,
     Drug,
     Material,

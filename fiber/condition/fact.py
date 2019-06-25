@@ -7,6 +7,7 @@ from fiber.database.table import (
     fd_mat,
     fd_diag,
     fd_proc,
+    filter_by,
 )
 
 
@@ -20,25 +21,34 @@ class FactCondition(DatabaseCondition):
 
     base_table = fact
 
-    def base_query(self):
-        return orm.Query(self.base_table).join(
+    def create_query(self):
+        base = orm.Query(self.base_table).join(
             d_pers,
             self.base_table.person_key == d_pers.person_key
         ).with_entities(
                 d_pers.MEDICAL_RECORD_NUMBER
         ).distinct()
 
+        # Join relevant dimensions to base query
+        return filter_by(base, self)
+
+    def mrn_filter(self, mrns):
+        return d_pers.MEDICAL_RECORD_NUMBER.in_(mrns)
+
     @property
     def dimension_table(self):
         """This property should return the dimension table."""
+        raise NotImplementedError
 
     @property
     def code(self):
         """"""
+        raise NotImplementedError
 
     @property
     def description(self):
         """"""
+        raise NotImplementedError
 
     @property
     def _default_columns(self):
@@ -51,6 +61,7 @@ class FactCondition(DatabaseCondition):
 
     def __init__(
         self,
+        # field: str = '',
         code: str = '',
         context: str = '',
         category: str = '',
@@ -62,6 +73,10 @@ class FactCondition(DatabaseCondition):
 
         super().__init__(**kwargs)
 
+        # (TODO) Think about == Syntax vs Constructor args.
+        # if field:
+        #     self._column =
+        # else:
         if context:
             self.clause &= _case_insensitive_like(
                 self.dimension_table.CONTEXT_NAME, context)
@@ -147,12 +162,6 @@ class Drug(Material):
 
 def make_method(name):
     def _method(self, other):
-        # n = self.__class__()
-        # n.clause = self.clause & getattr(fact.VALUE, name)(other)
-        # return n
-
-        # We'll have to check if comparison methods are allowed
-        # to returned the same instance.
         self.clause &= getattr(fact.VALUE, name)(other)
         return self
     return _method

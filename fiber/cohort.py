@@ -1,41 +1,45 @@
-from collections import defaultdict
 from collections.abc import Iterable
+from collections import defaultdict
 from functools import reduce
 
 import pandas as pd
 
-from fiber.clauses import BaseClause
+from fiber.condition.base import BaseCondition
 from fiber.condition import DatabaseCondition
-
 from fiber.database import read_with_progress
 from fiber.database.mysql import engine as _mysql_engine
 
 
 class Cohort:
 
-    def __init__(self, condition: BaseClause):
+    def __init__(self, condition: BaseCondition):
 
         self._condition = condition
         self._lab_results = None
 
-    @property
     def mrns(self):
-        return self._condition.mrns
-    patients = mrns
+        return self._condition.get_mrns()
 
     def get(self, data_conditions):
         if not isinstance(data_conditions, Iterable):
             data_conditions = [data_conditions]
 
+        data = []
+
         database_cond = defaultdict(list)
         for c in data_conditions:
             if isinstance(c, DatabaseCondition):
                 database_cond[c.base_table].append(c)
-        data = []
+
+        # (TODO) What might be better: Return a list of DataFrames for every
+        # data condition and don't merge them:
+        #
+        # for c in data_conditions:
+
         for c in database_cond.values():
             c = reduce(DatabaseCondition.__or__, c)
             print(f'Fetching data for {c}..')
-            data.append(c._fetch_data(self._condition.mrn_clause))
+            data.append(c.get_data(self.mrns()))
 
         return data if len(data) > 1 else data[0]
 
@@ -85,7 +89,7 @@ class Cohort:
                     TEST_RESULT_VALUE, UNIT_OF_MEASUREMENT
                 FROM EPIC_LAB
                 WHERE MEDICAL_RECORD_NUMBER IN
-                (""" + (", ").join(self.mrns) + """)
+                (""" + (", ").join(self.mrns()) + """)
                 LIMIT 100000;""", _mysql_engine
             )
             self._lab_results['VALUE'] = pd.to_numeric(
@@ -98,7 +102,7 @@ class Cohort:
             self.lab_results.TEST_NAME.str.contains(search)].copy()
 
     def __len__(self):
-        return len(self.mrns)
+        return len(self.mrns())
 
     def __iter__(self):
-        return iter(self.mrns)
+        return iter(self.mrns())
