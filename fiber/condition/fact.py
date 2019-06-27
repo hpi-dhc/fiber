@@ -21,44 +21,6 @@ class FactCondition(DatabaseCondition):
 
     base_table = fact
 
-    def create_query(self):
-        base = orm.Query(self.base_table).join(
-            d_pers,
-            self.base_table.person_key == d_pers.person_key
-        ).with_entities(
-                d_pers.MEDICAL_RECORD_NUMBER
-        ).distinct()
-
-        # Join relevant dimensions to base query
-        return filter_by(base, self)
-
-    def mrn_filter(self, mrns):
-        return d_pers.MEDICAL_RECORD_NUMBER.in_(mrns)
-
-    @property
-    def dimension_table(self):
-        """This property should return the dimension table."""
-        raise NotImplementedError
-
-    @property
-    def code(self):
-        """"""
-        raise NotImplementedError
-
-    @property
-    def description(self):
-        """"""
-        raise NotImplementedError
-
-    @property
-    def _default_columns(self):
-        return {
-            d_pers.MEDICAL_RECORD_NUMBER,
-            fact.AGE_IN_DAYS,
-            self.dimension_table.CONTEXT_NAME,
-            self.code,
-        }
-
     def __init__(
         self,
         # field: str = '',
@@ -90,6 +52,35 @@ class FactCondition(DatabaseCondition):
             self.clause &= _case_insensitive_like(
                 self.description, description)
 
+    @property
+    def dimension_table(self):
+        """This property should return the dimension table."""
+        raise NotImplementedError
+
+    @property
+    def code(self):
+        """"""
+        raise NotImplementedError
+
+    @property
+    def description(self):
+        """"""
+        raise NotImplementedError
+
+    def create_query(self):
+        base = orm.Query(self.base_table).join(
+            d_pers,
+            self.base_table.person_key == d_pers.person_key
+        ).with_entities(
+                d_pers.MEDICAL_RECORD_NUMBER
+        ).distinct()
+
+        # Join relevant dimensions to base query
+        return filter_by(base, self)
+
+    def mrn_filter(self, mrns):
+        return d_pers.MEDICAL_RECORD_NUMBER.in_(mrns)
+
     def with_(self, add_clause):
         self.clause &= add_clause
         return self
@@ -98,50 +89,90 @@ class FactCondition(DatabaseCondition):
 class Procedure(FactCondition):
 
     dimensions = {'PROCEDURE'}
-
     dimension_table = fd_proc
     code = fd_proc.CONTEXT_PROCEDURE_CODE
     category = fd_proc.PROCEDURE_TYPE
     description = fd_proc.PROCEDURE_DESCRIPTION
 
+    _default_columns = {
+        d_pers.MEDICAL_RECORD_NUMBER,
+        fact.AGE_IN_DAYS,
+        dimension_table.CONTEXT_NAME,
+        code
+    }
+
 
 class Diagnosis(FactCondition):
 
     dimensions = {'DIAGNOSIS'}
-
     dimension_table = fd_diag
     code = fd_diag.CONTEXT_DIAGNOSIS_CODE
     category = fd_diag.DIAGNOSIS_TYPE
     description = fd_diag.DESCRIPTION
 
+    _default_columns = {
+        d_pers.MEDICAL_RECORD_NUMBER,
+        fact.AGE_IN_DAYS,
+        dimension_table.CONTEXT_NAME,
+        code
+    }
+
 
 class Material(FactCondition):
 
     dimensions = {'MATERIAL'}
-
     dimension_table = fd_mat
     code = fd_mat.CONTEXT_MATERIAL_CODE
     category = fd_mat.MATERIAL_TYPE
     description = fd_mat.MATERIAL_NAME
 
+    _default_columns = {
+        d_pers.MEDICAL_RECORD_NUMBER,
+        fact.AGE_IN_DAYS,
+        dimension_table.CONTEXT_NAME,
+        code
+    }
+
 
 class VitalSign(Procedure):
+
+    _default_columns = {
+        d_pers.MEDICAL_RECORD_NUMBER,
+        fact.AGE_IN_DAYS,
+        fact.TIME_OF_DAY_KEY,
+        fd_proc.CONTEXT_NAME,
+        fd_proc.CONTEXT_PROCEDURE_CODE,
+        fact.VALUE
+    }
 
     def __init__(self, description, **kwargs):
         kwargs['category'] = 'Vital Signs'
         kwargs['description'] = description
         super().__init__(**kwargs)
 
-    @property
-    def _default_columns(self):
-        return {
-            d_pers.MEDICAL_RECORD_NUMBER,
-            fact.AGE_IN_DAYS,
-            fact.TIME_OF_DAY_KEY,
-            self.dimension_table.CONTEXT_NAME,
-            self.code,
-            fact.VALUE
-        }
+    def __lt__(self, other):
+        self.clause &= getattr(fact.VALUE, '__lt__')(other)
+        return self
+
+    def __le__(self, other):
+        self.clause &= getattr(fact.VALUE, '__le__')(other)
+        return self
+
+    def __eq__(self, other):
+        self.clause &= getattr(fact.VALUE, '__eq__')(other)
+        return self
+
+    def __ne__(self, other):
+        self.clause &= getattr(fact.VALUE, '__ne__')(other)
+        return self
+
+    def __gt__(self, other):
+        self.clause &= getattr(fact.VALUE, '__gt__')(other)
+        return self
+
+    def __ge__(self, other):
+        self.clause &= getattr(fact.VALUE, '__ge__')(other)
+        return self
 
 
 class Drug(Material):
@@ -158,22 +189,3 @@ class Drug(Material):
                 fd_mat.BRAND1.like(name) |
                 fd_mat.BRAND2.like(name)
             )
-
-
-def make_method(name):
-    def _method(self, other):
-        self.clause &= getattr(fact.VALUE, name)(other)
-        return self
-    return _method
-
-
-for magic_method in (
-    '__gt__',
-    '__lt__',
-    '__le__',
-    '__eq__',
-    '__ne__',
-    '__ge__',
-):
-    _method = make_method(magic_method)
-    setattr(VitalSign, magic_method, _method)
