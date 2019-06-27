@@ -14,6 +14,7 @@ from fiber import CACHE_PATH
 
 
 PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
+# (TODO) use tunnel https://pypi.org/project/sshtunnel/
 DATABASE_URI = ***REMOVED***
 
 engine = create_engine(DATABASE_URI)
