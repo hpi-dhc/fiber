@@ -1,5 +1,5 @@
 from fiber.cohort import Cohort
-from fiber.condition import Procedure, Diagnosis, Patient
+from fiber.condition import Procedure, Diagnosis, Patient, MRNS
 from fiber.database.table import fact
 min_age = fact.AGE_IN_DAYS > 365 * 18
 
@@ -9,7 +9,8 @@ hs = (
 )
 ps = (
     Patient(gender='Male') &
-    Patient(religion='Catholic')
+    Patient(religion='Catholic') &
+    Patient(race='Hispanic/Latino')
 )
 aki = Diagnosis(code='584.9', context='ICD-9')
 heart_surgery_cohort = Cohort(hs)
@@ -19,3 +20,9 @@ print(len(heart_surgery_cohort))
 print(len(heart_surgery_cohort.exclude(['2241492414', '2117141414']).mrns()))
 
 print(len(patient_cohort))
+
+exclude_cohort = Cohort(MRNS([1234, 12345, 123546]))
+print(exclude_cohort.mrns())
+print(exclude_cohort.exclude([1234]).mrns())
+print(exclude_cohort.mrns())
+print(exclude_cohort.exclude(set(['12345'])).mrns())

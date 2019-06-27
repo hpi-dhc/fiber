@@ -5,8 +5,8 @@ from sqlalchemy import orm, sql
 from contexttimer import Timer
 
 from fiber.condition.base import BaseCondition
-
 from fiber.database.table import Table
+
 from fiber.database.hana import session_scope, compile_sqla
 
 

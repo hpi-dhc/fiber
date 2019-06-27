@@ -14,7 +14,7 @@ class Patient(DatabaseCondition):
     }
 
     def __init__(
-        self, gender=None, religion=None,
+        self, gender=None, religion=None, race=None,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -23,6 +23,8 @@ class Patient(DatabaseCondition):
             self.clause &= d_pers.GENDER == gender
         if religion:
             self.clause &= d_pers.RELIGION == religion
+        if race:
+            self.clause &= d_pers.RACE == race
 
     def create_query(self):
         return orm.Query(self.base_table).filter(

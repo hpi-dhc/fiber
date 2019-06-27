@@ -5,9 +5,11 @@ from fiber.database.table import (
     d_pers,
     fact,
     fd_mat,
+    b_mat,
     fd_diag,
+    b_diag,
     fd_proc,
-    filter_by,
+    b_proc,
 )
 
 
@@ -20,6 +22,11 @@ def _case_insensitive_like(column, value):
 class FactCondition(DatabaseCondition):
 
     base_table = fact
+    dimensions_map = {
+        'PROCEDURE': (fd_proc, b_proc),
+        'MATERIAL': (fd_mat, b_mat),
+        'DIAGNOSIS': (fd_diag, b_diag),
+    }
 
     def __init__(
         self,
@@ -41,7 +48,7 @@ class FactCondition(DatabaseCondition):
         # else:
         if context:
             self.clause &= _case_insensitive_like(
-                self.dimension_table.CONTEXT_NAME, context)
+                self.d_table.CONTEXT_NAME, context)
         if category:
             self.clause &= _case_insensitive_like(
                 self.category, category)
@@ -53,7 +60,7 @@ class FactCondition(DatabaseCondition):
                 self.description, description)
 
     @property
-    def dimension_table(self):
+    def d_table(self):
         """This property should return the dimension table."""
         raise NotImplementedError
 
@@ -68,15 +75,28 @@ class FactCondition(DatabaseCondition):
         raise NotImplementedError
 
     def create_query(self):
-        base = orm.Query(self.base_table).join(
+        q = orm.Query(self.base_table).join(
             d_pers,
             self.base_table.person_key == d_pers.person_key
         ).with_entities(
                 d_pers.MEDICAL_RECORD_NUMBER
         ).distinct()
 
-        # Join relevant dimensions to base query
-        return filter_by(base, self)
+        q = q.filter(self.clause)
+
+        for dim_name in self.dimensions:
+            d_table, b_table = self.dimensions_map[dim_name]
+            d_key = f'{dim_name}_key'
+            b_key = f'{dim_name}_group_key'
+
+            q = q.join(
+                b_table,
+                getattr(fact, b_key) == getattr(b_table, b_key)
+            ).join(
+                d_table,
+                getattr(d_table, d_key) == getattr(b_table, d_key)
+            )
+        return q
 
     def mrn_filter(self, mrns):
         return d_pers.MEDICAL_RECORD_NUMBER.in_(mrns)
@@ -89,7 +109,7 @@ class FactCondition(DatabaseCondition):
 class Procedure(FactCondition):
 
     dimensions = {'PROCEDURE'}
-    dimension_table = fd_proc
+    d_table = fd_proc
     code = fd_proc.CONTEXT_PROCEDURE_CODE
     category = fd_proc.PROCEDURE_TYPE
     description = fd_proc.PROCEDURE_DESCRIPTION
@@ -97,7 +117,7 @@ class Procedure(FactCondition):
     _default_columns = {
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
-        dimension_table.CONTEXT_NAME,
+        d_table.CONTEXT_NAME,
         code
     }
 
@@ -105,7 +125,7 @@ class Procedure(FactCondition):
 class Diagnosis(FactCondition):
 
     dimensions = {'DIAGNOSIS'}
-    dimension_table = fd_diag
+    d_table = fd_diag
     code = fd_diag.CONTEXT_DIAGNOSIS_CODE
     category = fd_diag.DIAGNOSIS_TYPE
     description = fd_diag.DESCRIPTION
@@ -113,7 +133,7 @@ class Diagnosis(FactCondition):
     _default_columns = {
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
-        dimension_table.CONTEXT_NAME,
+        d_table.CONTEXT_NAME,
         code
     }
 
@@ -121,7 +141,7 @@ class Diagnosis(FactCondition):
 class Material(FactCondition):
 
     dimensions = {'MATERIAL'}
-    dimension_table = fd_mat
+    d_table = fd_mat
     code = fd_mat.CONTEXT_MATERIAL_CODE
     category = fd_mat.MATERIAL_TYPE
     description = fd_mat.MATERIAL_NAME
@@ -129,7 +149,7 @@ class Material(FactCondition):
     _default_columns = {
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
-        dimension_table.CONTEXT_NAME,
+        d_table.CONTEXT_NAME,
         code
     }
 

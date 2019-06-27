@@ -1,3 +1,4 @@
+from typing import Set, List, Union
 from collections.abc import Iterable
 from collections import defaultdict
 from functools import reduce
@@ -44,8 +45,11 @@ class Cohort:
 
         return data if len(data) > 1 else data[0]
 
-    def exclude(self, mrn_list):
-        self._excluded_mrns = self._excluded_mrns | set(mrn_list)
+    def exclude(self, mrns: Union[Set[str], Set[int], List[str], List[int]]):
+        if isinstance(mrns, set):
+            mrns = list(mrns)
+        mrns = set(map(str, mrns))
+        self._excluded_mrns = self._excluded_mrns | set(mrns)
         return self
 
     def occurs(

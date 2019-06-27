@@ -5,23 +5,6 @@ from fiber.database.hana import get_meta
 META = get_meta()
 
 
-# class Table:
-
-#     meta = META
-
-#     def __init__(self, name):
-#         self._table = self.meta.tables[f'MSDW_2018.{name.lower()}']
-#         self._name = name
-
-#     def __getattr__(self, attr):
-#         attr = attr.lower()
-
-#         if attr in self._table.columns:
-#             return self._table.columns[attr]
-#         else:
-#             raise AttributeError(f"Table {self._name} has no column {attr}")
-
-
 class Table(SQLATable):
 
     def __getattr__(self, attr):
@@ -52,41 +35,3 @@ fd_mat = Table('FD_MATERIAL')
 
 d_pers = Table('D_PERSON')
 d_enc = Table('D_ENCOUNTER')
-
-dimensions = {
-    'PROCEDURE': (fd_proc, b_proc),
-    'MATERIAL': (fd_mat, b_mat),
-    'DIAGNOSIS': (fd_diag, b_diag),
-    'ENCOUNTER': (d_enc, None),
-}
-
-
-# (TODO) Move to FactConditionand and refactor
-def join_dimension(query, dim):
-    assert dim in dimensions
-    d_table, b_table = dimensions[dim]
-    key = f'{dim}_key'
-
-    if b_table is None:
-        return query.join(
-            d_table,
-            getattr(d_table, key) == getattr(b_table, key)
-        )
-    else:
-        group_key = f'{dim}_group_key'
-
-        return query.join(
-            b_table,
-            getattr(fact, group_key) == getattr(b_table, group_key)
-        ).join(
-            d_table,
-            getattr(d_table, key) == getattr(b_table, key)
-        )
-
-
-def filter_by(query, condition):
-    query = query.filter(condition.clause)
-
-    for dimension in condition.dimensions:
-        query = join_dimension(query, dimension)
-    return query
