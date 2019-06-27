@@ -16,9 +16,10 @@ class Cohort:
 
         self._condition = condition
         self._lab_results = None
+        self._excluded_mrns = set()
 
     def mrns(self):
-        return self._condition.get_mrns()
+        return self._condition.get_mrns() - self._excluded_mrns
 
     def get(self, data_conditions):
         if not isinstance(data_conditions, Iterable):
@@ -42,6 +43,10 @@ class Cohort:
             data.append(c.get_data(self.mrns()))
 
         return data if len(data) > 1 else data[0]
+
+    def exclude(self, mrn_list):
+        self._excluded_mrns = self._excluded_mrns | set(mrn_list)
+        return self
 
     def occurs(
         self,
