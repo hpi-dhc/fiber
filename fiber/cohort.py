@@ -8,7 +8,6 @@ import pandas as pd
 from fiber.condition.base import BaseCondition
 from fiber.condition import DatabaseCondition
 from fiber.database import read_with_progress
-from fiber.database.mysql import engine as _mysql_engine
 
 
 class Cohort:
@@ -91,6 +90,7 @@ class Cohort:
     @property
     def lab_results(self):
         if self._lab_results is None:
+            from fiber.database.mysql import engine as _mysql_engine
             self._lab_results = read_with_progress("""
                 SELECT
                     MEDICAL_RECORD_NUMBER, AGE_IN_DAYS, TEST_CODE, TEST_NAME,
