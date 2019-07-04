@@ -4,10 +4,10 @@ import pandas as pd
 from sqlalchemy import orm, sql
 from contexttimer import Timer
 
+from fiber import VERBOSE
 from fiber.condition.base import BaseCondition
-from fiber.database.table import Table
-
 from fiber.database.hana import session_scope, compile_sqla
+from fiber.database.table import Table
 
 
 class DatabaseCondition(BaseCondition):
@@ -103,7 +103,8 @@ class DatabaseCondition(BaseCondition):
         if self._cached_mrns:
             return f'{self.__class__.__name__}: {len(self.get_mrns())} mrns'
         else:
+            clause = compile_sqla(self.clause) if VERBOSE else '...'
             return (
                 f'{self.__class__.__name__}: '
-                f'Not executed: \n\t{compile_sqla(self.clause)}'
+                f'Not executed: \n\t{clause}'
             )

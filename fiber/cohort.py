@@ -2,12 +2,16 @@ from typing import Set, List, Union
 from collections.abc import Iterable
 from collections import defaultdict
 from functools import reduce
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from fiber.condition.base import BaseCondition
 from fiber.condition import DatabaseCondition
 from fiber.database import read_with_progress
+
+from fiber.database.table import d_pers
+from fiber.condition.patient import Patient
 
 
 class Cohort:
@@ -39,9 +43,9 @@ class Cohort:
 
         for c in database_cond.values():
             c = reduce(DatabaseCondition.__or__, c)
+
             print(f'Fetching data for {c}..')
             data.append(c.get_data(self.mrns()))
-
         return data if len(data) > 1 else data[0]
 
     def exclude(self, mrns: Union[Set[str], Set[int], List[str], List[int]]):
@@ -53,11 +57,19 @@ class Cohort:
 
     def occurs(
         self,
-        target, relative_to,
-        trim_func=lambda x: x.split('.')[0]
+        target,
+        relative_to=None,
+        before=None,
+        after=None,
+        trim_func=lambda x: x.split('.')[0],
     ):
+        if not bool(relative_to) ^ bool(before) ^ bool(after):
+            raise ValueError(
+                'Only one of (relative_to, before, after) can be used.'
+            )
+        event = relative_to or before or after
 
-        event_df = self.get(relative_to)
+        event_df = self.get(event)
         target_df = self.get(target)
         event_df = self._trim_codes(event_df, trim_func)
         target_df = self._trim_codes(target_df, trim_func)
@@ -73,11 +85,18 @@ class Cohort:
         )
         target_df = target_df.drop_duplicates()
 
-        merged = event_df.merge(
+        df = event_df.merge(
             target_df, how='left', on='medical_record_number')
-        merged['occurs_after_days'] = merged.min_age - merged.age_in_days
 
-        return merged
+        if relative_to or after:
+            df['occurs_after_x_days'] = df.min_age - df.age_in_days
+            if after:
+                df = df[df.occurs_after_x_days >= 0]
+        else:
+            df['occurs_x_days_before'] = df.age_in_days - df.min_age
+            df = df[df.occurs_x_days_before >= 0]
+
+        return df
 
     @staticmethod
     def _trim_codes(df, trim_func):
@@ -105,6 +124,72 @@ class Cohort:
                 self._lab_results.TEST_RESULT_VALUE, errors='coerce')
             self._lab_results.dropna(inplace=True)
         return self._lab_results
+
+    @property
+    def demographics(self):
+        '''
+        Generates basic cohort demographics, such as mean and standard
+        deviation for age and the gender distribution - including
+        plots.
+        '''
+        condition_events = self.get(self._condition)
+        df_age = condition_events[
+            condition_events.age_in_days < 50000
+        ].groupby(
+            ["medical_record_number"]
+        ).age_in_days.mean().apply(lambda x: x / 365)
+
+        df_gender = self.get(
+            Patient(data_columns=[d_pers.MEDICAL_RECORD_NUMBER, d_pers.GENDER])
+        )
+        gender_counts = df_gender.gender.value_counts()
+
+        gender_figure, gender_ax = plt.subplots()
+        age_figure, age_ax = plt.subplots()
+
+        sns.distplot(df_age, ax=age_ax)
+        sns.countplot(df_gender.gender, palette="RdBu", ax=gender_ax)
+
+        # TODO: DEMOGRAPHICS OBJECT
+        return {
+            "age": {
+                "mean": df_age.mean(),
+                "std": df_age.std(),
+                "figure": age_figure
+            },
+            "gender": {
+                "distribution": {
+                    "male": gender_counts.Male / sum(gender_counts),
+                    "female": gender_counts.Female / sum(gender_counts),
+                },
+                "figure": gender_figure
+            }
+        }
+
+    def has_onset(self, name, condition, time_deltas=[1, 7, 14, 28]):
+        occurrences = self.occurs((condition), after=self._condition)[
+            ["medical_record_number", "occurs_after_x_days"]
+        ]
+
+        df = pd.DataFrame(self.mrns(), columns=["medical_record_number"])
+        for i in time_deltas:
+            mrns = set(occurrences[
+                occurrences.occurs_after_x_days <= i
+            ].medical_record_number)
+            df[f"{name}_{i}_days"] = df.medical_record_number.isin(mrns)
+
+        return df
+
+    def has_precondition(self, name, condition):
+        mrns = set(
+            self.occurs(
+                (condition), before=self._condition
+            ).medical_record_number
+        )
+
+        df = pd.DataFrame(self.mrns(), columns=["medical_record_number"])
+        df[name] = df.medical_record_number.isin(mrns)
+        return df
 
     def lab_results_for(self, search):
         return self.lab_results[
