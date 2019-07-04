@@ -12,6 +12,7 @@ class Patient(DatabaseCondition):
         d_pers.GENDER,
         d_pers.RELIGION,
     }
+    mrn_column = d_pers.MEDICAL_RECORD_NUMBER
     age_in_days = fact.AGE_IN_DAYS
 
     def __init__(
@@ -35,9 +36,6 @@ class Patient(DatabaseCondition):
         ).with_entities(
                 d_pers.MEDICAL_RECORD_NUMBER
         ).distinct()
-
-    def mrn_filter(self, mrns):
-        return d_pers.MEDICAL_RECORD_NUMBER.in_(mrns)
 
     def __and__(self, other):
         if (

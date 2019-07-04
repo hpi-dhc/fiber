@@ -1,7 +1,11 @@
 from typing import Set
 
 import pandas as pd
-from sqlalchemy import orm, sql
+from sqlalchemy import (
+    func,
+    orm,
+    sql,
+)
 from contexttimer import Timer
 
 from fiber import VERBOSE
@@ -37,7 +41,12 @@ class DatabaseCondition(BaseCondition):
 
     @property
     def _default_columns(self):
-        """ Set of default columns of the database data query"""
+        """Set of default columns of the database data query"""
+        raise NotImplementedError
+
+    @property
+    def mrn_column(self):
+        """The column of the base table that holds the medical record number"""
         raise NotImplementedError
 
     @property
@@ -51,10 +60,6 @@ class DatabaseCondition(BaseCondition):
         This base query should yield all medical record numbers in the
         base table. Conditions can be added through the clause attribute.
         """
-        raise NotImplementedError
-
-    def mrn_filter(self, mrns):
-        """Returns a clause that restricts the query to a set of mrns."""
         raise NotImplementedError
 
     def _fetch_mrns(self):
@@ -71,14 +76,42 @@ class DatabaseCondition(BaseCondition):
     def get_data(self, inclusion_mrns):
         with session_scope() as session:
             q = self.create_query()
-            q = q.filter(self.mrn_filter(inclusion_mrns))
+            q = q.filter(self.mrn_column.in_(inclusion_mrns))
             q = q.with_entities(*self.data_columns).distinct()
 
-            print(f'Executing: {compile_sqla(q)}')
+            print(f'Fetching data for {len(inclusion_mrns)} patients.')
             with Timer() as t:
                 result = pd.read_sql(q.statement, session.connection())
             print('Execution time:', t.elapsed)
             return result
+
+    def value_counts(self, *columns):
+        if not columns:
+            raise ValueError('Supply one or multiple columns as arguments.')
+
+        with session_scope() as session:
+            q = self.create_query()
+            q = q.group_by(
+                *columns
+            ).with_entities(
+                *columns
+            ).order_by(
+                func.count(self.mrn_column).label('count').desc()
+            ).with_session(session)
+
+            print(f'Executing: {compile_sqla(q)}')
+            return pd.read_sql(q.statement, session.connection())
+
+    def distinct(self, *columns):
+        if not columns:
+            raise ValueError('Supply one or multiple columns as arguments.')
+
+        with session_scope() as session:
+            q = self.create_query()
+            q = q.with_entities(*columns).distinct().with_session(session)
+
+            print(f'Executing: {compile_sqla(q)}')
+            return pd.read_sql(q.statement, session.connection())
 
     def __or__(self, other):
         if (

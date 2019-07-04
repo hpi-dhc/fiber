@@ -1,5 +1,4 @@
 from typing import Set, List, Union
-from collections.abc import Iterable
 from collections import defaultdict
 from functools import reduce
 import seaborn as sns
@@ -25,16 +24,13 @@ class Cohort:
     def mrns(self):
         return self._condition.get_mrns() - self._excluded_mrns
 
-    def get(self, data_conditions):
-        if not isinstance(data_conditions, Iterable):
-            data_conditions = [data_conditions]
-
+    def get(self, *data_conditions):
         data = []
 
         database_cond = defaultdict(list)
-        for c in data_conditions:
-            if isinstance(c, DatabaseCondition):
-                database_cond[c.base_table].append(c)
+        for cond in data_conditions:
+            if isinstance(cond, DatabaseCondition):
+                database_cond[cond.base_table].append(cond)
 
         # (TODO) What might be better: Return a list of DataFrames for every
         # data condition and don't merge them:
