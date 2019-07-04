@@ -1,5 +1,9 @@
+import yaml
+import pandas as pd
 from sqlalchemy import orm
+from functools import reduce
 
+from fiber import DEFAULT_STORE_FILE_PATH
 from fiber.condition import DatabaseCondition
 from fiber.database.table import (
     d_pers,
@@ -136,6 +140,34 @@ class Diagnosis(FactCondition):
         d_table.CONTEXT_NAME,
         code
     }
+
+    @classmethod
+    def from_condition_store(
+        cls,
+        name,
+        file_path=DEFAULT_STORE_FILE_PATH
+    ):
+        with open(file_path, 'r') as f:
+            diagnosis = yaml.load(f, Loader=yaml.FullLoader)["diagnosis"]
+            df = pd.DataFrame.from_dict(diagnosis)
+
+        icd10_codes = reduce(
+            cls.__or__,
+            [
+                cls(context='ICD-10', code=code)
+                for code in df[df.name == name]["icd10cm"].iloc[0]
+            ]
+        )
+
+        icd9_codes = reduce(
+            cls.__or__,
+            [
+                cls(context='ICD-9', code=code)
+                for code in df[df.name == name]["icd9cm"].iloc[0]
+            ]
+        )
+
+        return icd9_codes | icd10_codes
 
 
 class Material(FactCondition):

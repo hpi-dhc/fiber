@@ -1,6 +1,6 @@
 from sqlalchemy import orm
 
-from fiber.database.table import d_pers
+from fiber.database.table import d_pers, fact
 from fiber.condition import DatabaseCondition
 
 
@@ -12,6 +12,7 @@ class Patient(DatabaseCondition):
         d_pers.GENDER,
         d_pers.RELIGION,
     }
+    age_in_days = fact.AGE_IN_DAYS
 
     def __init__(
         self, gender=None, religion=None, race=None,
@@ -29,6 +30,8 @@ class Patient(DatabaseCondition):
     def create_query(self):
         return orm.Query(self.base_table).filter(
             self.clause
+        ).filter(
+            d_pers.ACTIVE_FLAG == 'Y'
         ).with_entities(
                 d_pers.MEDICAL_RECORD_NUMBER
         ).distinct()

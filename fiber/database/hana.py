@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker
 
-from fiber import CACHE_PATH
+from fiber import CACHE_PATH, VERBOSE
 
 
 PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
@@ -54,10 +54,12 @@ def get_meta():
 
 
 def compile_sqla(query_or_exp):
-    compileable = getattr(query_or_exp, 'statement', query_or_exp)
-    return sqlparse.format(str(
-        compileable.compile(engine, compile_kwargs={"literal_binds": True})
-    ), reindent=True)
+    if VERBOSE:
+        compileable = getattr(query_or_exp, 'statement', query_or_exp)
+        return sqlparse.format(str(
+            compileable.compile(engine, compile_kwargs={"literal_binds": True})
+        ), reindent=True)
+    return "..."
 
 
 def print_sqla(query_or_exp):
