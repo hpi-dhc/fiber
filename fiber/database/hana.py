@@ -15,7 +15,7 @@ from fiber import CACHE_PATH
 
 PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
 # (TODO) use tunnel https://pypi.org/project/sshtunnel/
-DATABASE_URI = ***REMOVED***
+DATABASE_URI = f'hana://SYSTEM:{PASSWD}@la-forge.mssm.edu:39041/'
 
 engine = create_engine(DATABASE_URI)
 engine.execute('SET SCHEMA MSDW_2018;')
