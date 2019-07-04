@@ -1,7 +1,11 @@
 import yaml
-import pandas as pd
-from sqlalchemy import orm
 from functools import reduce
+
+import pandas as pd
+from sqlalchemy import (
+    orm,
+    func,
+)
 
 from fiber import DEFAULT_STORE_FILE_PATH
 from fiber.condition import DatabaseCondition
@@ -18,9 +22,9 @@ from fiber.database.table import (
 
 
 def _case_insensitive_like(column, value):
-    return column.like(value)
-    # Actual case insensitivity causes OOM at the moment.
-    # return func.upper(column).like(value.upper())
+    # return column.like(value)
+    # Actual case insensitivity somewhat memory intensive at the moment.
+    return func.upper(column).like(value.upper())
 
 
 class FactCondition(DatabaseCondition):
@@ -31,6 +35,7 @@ class FactCondition(DatabaseCondition):
         'MATERIAL': (fd_mat, b_mat),
         'DIAGNOSIS': (fd_diag, b_diag),
     }
+    mrn_column = d_pers.MEDICAL_RECORD_NUMBER
 
     def __init__(
         self,
@@ -51,14 +56,12 @@ class FactCondition(DatabaseCondition):
         #     self._column =
         # else:
         if context:
-            self.clause &= _case_insensitive_like(
-                self.d_table.CONTEXT_NAME, context)
+            self.clause &= self.d_table.CONTEXT_NAME.like(context)
         if category:
             self.clause &= _case_insensitive_like(
                 self.category, category)
         if code:
-            self.clause &= _case_insensitive_like(
-                self.code, code)
+            self.clause &= self.code.like(code)
         if description:
             self.clause &= _case_insensitive_like(
                 self.description, description)
@@ -101,9 +104,6 @@ class FactCondition(DatabaseCondition):
                 getattr(d_table, d_key) == getattr(b_table, d_key)
             )
         return q
-
-    def mrn_filter(self, mrns):
-        return d_pers.MEDICAL_RECORD_NUMBER.in_(mrns)
 
     def with_(self, add_clause):
         self.clause &= add_clause
