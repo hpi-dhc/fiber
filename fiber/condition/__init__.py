@@ -7,6 +7,7 @@ from .fact import (
     VitalSign,
 )
 from .patient import Patient
+from .lab_value import LabValue
 from .mrns import MRNS
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     'Patient',
     'Procedure',
     'VitalSign',
+    'LabValue',
     'Drug',
     'MRNS',
 ]

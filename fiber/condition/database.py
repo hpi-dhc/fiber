@@ -29,6 +29,8 @@ class DatabaseCondition(BaseCondition):
         self.clause = sql.true() if clause is None else clause
         self._specified_columns = data_columns or set()
 
+        self._data_cache = {}
+
     @property
     def base_table(self) -> Table:
         """This property should be set to the database table containing data.
@@ -70,20 +72,27 @@ class DatabaseCondition(BaseCondition):
             print(f'Executing: {compile_sqla(q)}')
             with Timer() as t:
                 result = set(mrn[0] for mrn in q.all())
-            print('Execution time:', t.elapsed)
+            print(f'Execution time: {t.elapsed:.2f}s')
             return result
 
     def get_data(self, inclusion_mrns):
-        with session_scope() as session:
-            q = self.create_query()
-            q = q.filter(self.mrn_column.in_(inclusion_mrns))
-            q = q.with_entities(*self.data_columns).distinct()
+        request_hash = (
+            hash(frozenset(inclusion_mrns)),
+            hash(frozenset(self.data_columns)),
+        )
 
-            print(f'Fetching data for {len(inclusion_mrns)} patients.')
-            with Timer() as t:
-                result = pd.read_sql(q.statement, session.connection())
-            print('Execution time:', t.elapsed)
-            return result
+        if request_hash not in self._data_cache:
+            with session_scope() as session:
+                q = self.create_query()
+                q = q.filter(self.mrn_column.in_(inclusion_mrns))
+                q = q.with_entities(*self.data_columns).distinct()
+
+                with Timer() as t:
+                    result = pd.read_sql(q.statement, session.connection())
+                print(f'Execution time: {t.elapsed:.2f}s')
+                self._data_cache[request_hash] = result
+
+        return self._data_cache[request_hash]
 
     def value_counts(self, *columns):
         if not columns:
@@ -138,6 +147,17 @@ class DatabaseCondition(BaseCondition):
         else:
             clause = compile_sqla(self.clause) if VERBOSE else '...'
             return (
-                f'{self.__class__.__name__}: '
-                f'Not executed: \n\t{clause}'
+                f'{self.__class__.__name__}( '
+                f'Not yet executed: {clause})'
             )
+
+    def __len__(self):
+        if self._cached_mrns:
+            return len(self.get_mrns())
+        else:
+            with session_scope() as session, Timer() as t:
+                q = self.create_query().with_session(session)
+                print(f'Executing: {compile_sqla(q)}')
+                count = q.count()
+                print(f'Execution time: {t.elapsed:.2f}s')
+                return count

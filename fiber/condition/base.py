@@ -30,3 +30,6 @@ class BaseCondition:
 
     def __and__(self, other):
         return BaseCondition(self.get_mrns() & other.get_mrns())
+
+    def __len__(self):
+        return len(self.get_mrns())
