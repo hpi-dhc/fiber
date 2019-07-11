@@ -167,7 +167,9 @@ class Diagnosis(FactCondition):
             ]
         )
 
-        return icd9_codes | icd10_codes
+        condition = (icd9_codes | icd10_codes)
+        condition._label = name
+        return condition
 
 
 class Material(FactCondition):

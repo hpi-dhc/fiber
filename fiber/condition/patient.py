@@ -10,7 +10,8 @@ class Patient(DatabaseCondition):
     _default_columns = {
         d_pers.MEDICAL_RECORD_NUMBER,
         d_pers.GENDER,
-        d_pers.RELIGION,
+        d_pers.RACE,
+        d_pers.PATIENT_ETHNIC_GROUP,
     }
     mrn_column = d_pers.MEDICAL_RECORD_NUMBER
     age_in_days = fact.AGE_IN_DAYS
@@ -34,7 +35,7 @@ class Patient(DatabaseCondition):
         ).filter(
             d_pers.ACTIVE_FLAG == 'Y'
         ).with_entities(
-                d_pers.MEDICAL_RECORD_NUMBER
+                self.mrn_column
         ).distinct()
 
     def __and__(self, other):

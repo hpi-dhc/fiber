@@ -1,16 +1,17 @@
-from typing import Set, List, Union
 from collections import defaultdict
 from functools import reduce
-import seaborn as sns
+from typing import Set, List, Union
+
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 
 from fiber.condition.base import BaseCondition
-from fiber.condition import DatabaseCondition
-from fiber.database import read_with_progress
-
+from fiber.condition import (
+    DatabaseCondition,
+    Patient,
+)
 from fiber.database.table import d_pers
-from fiber.condition.patient import Patient
 
 
 class Cohort:
@@ -103,25 +104,6 @@ class Cohort:
         return df.drop_duplicates()
 
     @property
-    def lab_results(self):
-        if self._lab_results is None:
-            from fiber.database.mysql import engine as _mysql_engine
-            self._lab_results = read_with_progress("""
-                SELECT
-                    MEDICAL_RECORD_NUMBER, AGE_IN_DAYS, TEST_CODE, TEST_NAME,
-                    LAB_STATUS, RESULT_STATUS, RESULT_FLAG, ABNORMAL_FLAG,
-                    TEST_RESULT_VALUE, UNIT_OF_MEASUREMENT
-                FROM EPIC_LAB
-                WHERE MEDICAL_RECORD_NUMBER IN
-                (""" + (", ").join(self.mrns()) + """)
-                LIMIT 100000;""", _mysql_engine
-            )
-            self._lab_results['VALUE'] = pd.to_numeric(
-                self._lab_results.TEST_RESULT_VALUE, errors='coerce')
-            self._lab_results.dropna(inplace=True)
-        return self._lab_results
-
-    @property
     def demographics(self):
         '''
         Generates basic cohort demographics, such as mean and standard
@@ -176,7 +158,7 @@ class Cohort:
 
         return df
 
-    def has_precondition(self, name, condition):
+    def has_precondition(self, condition):
         mrns = set(
             self.occurs(
                 (condition), before=self._condition
@@ -184,15 +166,61 @@ class Cohort:
         )
 
         df = pd.DataFrame(self.mrns(), columns=["medical_record_number"])
-        df[name] = df.medical_record_number.isin(mrns)
+        df[condition._label] = df.medical_record_number.isin(mrns)
         return df
 
-    def lab_results_for(self, search):
-        return self.lab_results[
-            self.lab_results.TEST_NAME.str.contains(search)].copy()
+    def results_for(
+        self,
+        target,
+        relative_to=None,
+        before=None,
+        after=None,
+        trim_func=lambda x: x.split('.')[0],
+    ):
+        if not bool(relative_to) ^ bool(before) ^ bool(after):
+            raise ValueError(
+                'Only one of (relative_to, before, after) can be used.'
+            )
+        event = relative_to or before or after
+
+        event_df = self.get(event)
+        event_df = self._trim_codes(event_df, trim_func)
+        target_df = self.get(target)
+
+        target_df = target_df.groupby(
+            ['medical_record_number', 'age_in_days']
+        )['numeric_value'].mean().reset_index()
+
+        df = event_df.merge(
+            target_df, how='left', on='medical_record_number')
+
+        if relative_to or after:
+            df['occurs_after_x_days'] = df.age_in_days_y - df.age_in_days_x
+            if after:
+                df = df[df.occurs_after_x_days >= 0]
+        else:
+            df['occurs_x_days_before'] = df.age_in_days_x - df.age_in_days_y
+            df = df[df.occurs_x_days_before >= 0]
+
+        df.rename(columns={"age_in_days_x": "age_in_days"})
+        return df[[
+            "medical_record_number",
+            "age_in_days_x",
+            "numeric_value",
+            "occurs_x_days_before"
+        ]]
+
+    def build_data(self, *dataframes):
+        base = pd.DataFrame(self, columns=['medical_record_number'])
+        patient_data = self.get(Patient())
+        merged = reduce(
+            lambda l, r: pd.merge(l, r, on='medical_record_number'),
+            [base, patient_data] + list(dataframes)
+        )
+        return merged
 
     def __len__(self):
-        return len(self.mrns())
+        return len(self._condition)
 
     def __iter__(self):
         return iter(self.mrns())
