@@ -16,16 +16,18 @@ from fiber.database.table import d_pers
 
 class Cohort:
 
-    def __init__(self, condition: BaseCondition):
+    def __init__(self, condition: BaseCondition, limit=None):
 
         self._condition = condition
         self._lab_results = None
         self._excluded_mrns = set()
+        self._limit = limit
 
     def mrns(self):
-        return self._condition.get_mrns() - self._excluded_mrns
+        return (self._condition.get_mrns(limit=self._limit)
+                - self._excluded_mrns)
 
-    def get(self, *data_conditions):
+    def get(self, *data_conditions, limit=None):
         data = []
 
         database_cond = defaultdict(list)
@@ -42,7 +44,7 @@ class Cohort:
             c = reduce(DatabaseCondition.__or__, c)
 
             print(f'Fetching data for {c}..')
-            data.append(c.get_data(self.mrns()))
+            data.append(c.get_data(self.mrns(), limit=limit))
         return data if len(data) > 1 else data[0]
 
     def exclude(self, mrns: Union[Set[str], Set[int], List[str], List[int]]):

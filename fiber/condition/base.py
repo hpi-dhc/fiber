@@ -12,16 +12,16 @@ class BaseCondition:
     ):
         self._cached_mrns = mrns or set()
 
-    def get_mrns(self):
+    def get_mrns(self, limit=None):
         if not self._cached_mrns:
-            self._cached_mrns = self._fetch_mrns()
+            self._cached_mrns = self._fetch_mrns(limit=limit)
         return self._cached_mrns
 
-    def _fetch_mrns(self) -> Set[str]:
+    def _fetch_mrns(self, limit=None) -> Set[str]:
         """Should return a set of mrns for which the condition holds true."""
         raise NotImplementedError
 
-    def get_data(self, for_mrns):
+    def get_data(self, for_mrns, limit=None):
         """Must be implemented by subclass to return relevant data."""
         raise NotImplementedError
 

@@ -1,5 +1,14 @@
+from fiber.condition import (
+    Procedure,
+    Diagnosis,
+    Patient,
+    VitalSign,
+    Material,
+    LabValue,
+)
+
+'''
 from fiber.cohort import Cohort
-from fiber.condition import Procedure, Diagnosis, Patient, MRNS
 from fiber.database.table import fact
 min_age = fact.AGE_IN_DAYS > 365 * 18
 
@@ -13,16 +22,18 @@ ps = (
     Patient(race='Hispanic/Latino')
 )
 aki = Diagnosis(code='584.9', context='ICD-9')
-heart_surgery_cohort = Cohort(hs)
-patient_cohort = Cohort(ps)
 
-print(len(heart_surgery_cohort))
-print(len(heart_surgery_cohort.exclude(['2241492414', '2117141414']).mrns()))
+heart_surgery_cohort = Cohort(hs, limit=10).get(Procedure('35.%'), limit=10)
+patient_cohort = Cohort(ps, limit=10).get(VitalSign('Pulse Apical'), limit=10)
+print(patient_cohort)
+print(heart_surgery_cohort)
+'''
 
-print(len(patient_cohort))
+print(Procedure(code='30.%').example_values().to_string())
+print(Diagnosis(code='%10%').example_values().to_string())
+print(VitalSign('%pulse%').example_values().to_string())
+print(Material('%heart%').example_values().to_string())
+print(Patient(gender='Male').example_values().to_string())
+print(LabValue(test_name='%SERUM%').example_values().to_string())
 
-exclude_cohort = Cohort(MRNS([1234, 12345, 123546]))
-print(exclude_cohort.mrns())
-print(exclude_cohort.exclude([1234]).mrns())
-print(exclude_cohort.mrns())
-print(exclude_cohort.exclude(set(['12345'])).mrns())
+# print(len(patient_cohort))
