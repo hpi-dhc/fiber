@@ -35,5 +35,6 @@ fd_mat = Table('FD_MATERIAL')
 
 d_pers = Table('D_PERSON')
 d_enc = Table('D_ENCOUNTER')
+d_uom = Table('D_UNIT_OF_MEASURE')
 
 epic_lab = Table('EPIC_LAB')

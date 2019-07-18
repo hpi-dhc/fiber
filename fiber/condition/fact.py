@@ -4,11 +4,11 @@ from functools import reduce
 import pandas as pd
 from sqlalchemy import (
     orm,
-    func,
 )
 
 from fiber import DEFAULT_STORE_FILE_PATH
 from fiber.condition import DatabaseCondition
+from fiber.condition.database import _case_insensitive_like
 from fiber.database.table import (
     d_pers,
     fact,
@@ -18,13 +18,8 @@ from fiber.database.table import (
     b_diag,
     fd_proc,
     b_proc,
+    d_uom,
 )
-
-
-def _case_insensitive_like(column, value):
-    # return column.like(value)
-    # Actual case insensitivity somewhat memory intensive at the moment.
-    return func.upper(column).like(value.upper())
 
 
 class FactCondition(DatabaseCondition):
@@ -34,6 +29,7 @@ class FactCondition(DatabaseCondition):
         'PROCEDURE': (fd_proc, b_proc),
         'MATERIAL': (fd_mat, b_mat),
         'DIAGNOSIS': (fd_diag, b_diag),
+        'UNIT_OF_MEASURE': (d_uom, 'uom_key', fact, 'uom_key'),
     }
     mrn_column = d_pers.MEDICAL_RECORD_NUMBER
 
@@ -92,17 +88,25 @@ class FactCondition(DatabaseCondition):
         q = q.filter(self.clause)
 
         for dim_name in self.dimensions:
-            d_table, b_table = self.dimensions_map[dim_name]
-            d_key = f'{dim_name}_key'
-            b_key = f'{dim_name}_group_key'
+            join_definition = self.dimensions_map[dim_name]
+            if len(join_definition) == 2:
+                d_table, b_table = join_definition
+                d_key = f'{dim_name}_key'
+                b_key = f'{dim_name}_group_key'
 
-            q = q.join(
-                b_table,
-                getattr(fact, b_key) == getattr(b_table, b_key)
-            ).join(
-                d_table,
-                getattr(d_table, d_key) == getattr(b_table, d_key)
-            )
+                q = q.join(
+                    b_table,
+                    getattr(fact, b_key) == getattr(b_table, b_key)
+                ).join(
+                    d_table,
+                    getattr(d_table, d_key) == getattr(b_table, d_key)
+                )
+            else:
+                join_table, join_key, table, key = join_definition
+                q = q.join(
+                    join_table,
+                    getattr(table, key) == getattr(join_table, join_key)
+                )
         return q
 
     def with_(self, add_clause):
@@ -118,12 +122,12 @@ class Procedure(FactCondition):
     category = fd_proc.PROCEDURE_TYPE
     description = fd_proc.PROCEDURE_DESCRIPTION
 
-    _default_columns = {
+    _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         d_table.CONTEXT_NAME,
         code
-    }
+    ]
 
 
 class Diagnosis(FactCondition):
@@ -134,12 +138,12 @@ class Diagnosis(FactCondition):
     category = fd_diag.DIAGNOSIS_TYPE
     description = fd_diag.DESCRIPTION
 
-    _default_columns = {
+    _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         d_table.CONTEXT_NAME,
         code
-    }
+    ]
 
     @classmethod
     def from_condition_store(
@@ -180,24 +184,26 @@ class Material(FactCondition):
     category = fd_mat.MATERIAL_TYPE
     description = fd_mat.MATERIAL_NAME
 
-    _default_columns = {
+    _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         d_table.CONTEXT_NAME,
         code
-    }
+    ]
 
 
 class VitalSign(Procedure):
+    dimensions = {'PROCEDURE', 'UNIT_OF_MEASURE'}
 
-    _default_columns = {
+    _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         fact.TIME_OF_DAY_KEY,
         fd_proc.CONTEXT_NAME,
         fd_proc.CONTEXT_PROCEDURE_CODE,
-        fact.VALUE
-    }
+        fact.VALUE,
+        d_uom.UNIT_OF_MEASURE
+    ]
 
     def __init__(self, description, **kwargs):
         kwargs['category'] = 'Vital Signs'

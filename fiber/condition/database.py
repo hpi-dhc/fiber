@@ -14,6 +14,12 @@ from fiber.database.hana import session_scope, compile_sqla
 from fiber.database.table import Table
 
 
+def _case_insensitive_like(column, value):
+    # return column.like(value)
+    # Actual case insensitivity somewhat memory intensive at the moment.
+    return func.upper(column).like(value.upper())
+
+
 class DatabaseCondition(BaseCondition):
 
     def __init__(
@@ -27,7 +33,7 @@ class DatabaseCondition(BaseCondition):
         self.dimensions = dimensions or set()
         # sql.true() acts as an 'empty' initializer for the clause
         self.clause = sql.true() if clause is None else clause
-        self._specified_columns = data_columns or set()
+        self._specified_columns = data_columns or []
 
         self._data_cache = {}
 
@@ -43,7 +49,7 @@ class DatabaseCondition(BaseCondition):
 
     @property
     def _default_columns(self):
-        """Set of default columns of the database data query"""
+        """Array of default columns of the database data query"""
         raise NotImplementedError
 
     @property
@@ -64,9 +70,11 @@ class DatabaseCondition(BaseCondition):
         """
         raise NotImplementedError
 
-    def _fetch_mrns(self):
+    def _fetch_mrns(self, limit=None):
         with session_scope() as session:
             q = self.create_query()
+            if limit:
+                q = q.limit(limit)
             q = q.with_session(session)
 
             print(f'Executing: {compile_sqla(q)}')
@@ -75,16 +83,19 @@ class DatabaseCondition(BaseCondition):
             print(f'Execution time: {t.elapsed:.2f}s')
             return result
 
-    def get_data(self, inclusion_mrns):
+    def get_data(self, inclusion_mrns=None, limit=None):
         request_hash = (
-            hash(frozenset(inclusion_mrns)),
-            hash(frozenset(self.data_columns)),
+            hash(frozenset(inclusion_mrns or {'All'})),
+            hash(frozenset(set(self.data_columns))),
         )
 
         if request_hash not in self._data_cache:
             with session_scope() as session:
                 q = self.create_query()
-                q = q.filter(self.mrn_column.in_(inclusion_mrns))
+                if inclusion_mrns:
+                    q = q.filter(self.mrn_column.in_(inclusion_mrns))
+                if limit > 0:
+                    q = q.limit(limit)
                 q = q.with_entities(*self.data_columns).distinct()
 
                 with Timer() as t:
@@ -93,6 +104,9 @@ class DatabaseCondition(BaseCondition):
                 self._data_cache[request_hash] = result
 
         return self._data_cache[request_hash]
+
+    def example_values(self):
+        return self.get_data(limit=10)
 
     def value_counts(self, *columns):
         if not columns:
@@ -127,10 +141,15 @@ class DatabaseCondition(BaseCondition):
             self.base_table == other.base_table
             and not (self._cached_mrns or other._cached_mrns)
         ):
+            unique_columns = []
+            for col in (self.data_columns+other.data_columns):
+                if col not in unique_columns:
+                    unique_columns.append(col)
+
             return self.__class__(
                 dimensions=self.dimensions | other.dimensions,
                 clause=self.clause | other.clause,
-                data_columns=self.data_columns | other.data_columns,
+                data_columns=unique_columns,
             )
         else:
             return BaseCondition(mrns=self.get_mrns() | other.get_mrns())
