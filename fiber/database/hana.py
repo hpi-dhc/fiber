@@ -10,12 +10,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker
 
-from fiber import CACHE_PATH, VERBOSE
+from fiber import CACHE_PATH
 
 
 PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
 # (TODO) use tunnel https://pypi.org/project/sshtunnel/
-DATABASE_URI = f'hana://SYSTEM:{PASSWD}@la-forge.mssm.edu:39041/'
+DATABASE_URI = ***REMOVED***
 
 engine = create_engine(DATABASE_URI)
 engine.execute('SET SCHEMA MSDW_2018;')
@@ -54,12 +54,10 @@ def get_meta():
 
 
 def compile_sqla(query_or_exp):
-    if VERBOSE:
-        compileable = getattr(query_or_exp, 'statement', query_or_exp)
-        return sqlparse.format(str(
-            compileable.compile(engine, compile_kwargs={"literal_binds": True})
-        ), reindent=True)
-    return "..."
+    compileable = getattr(query_or_exp, 'statement', query_or_exp)
+    return sqlparse.format(str(
+        compileable.compile(engine, compile_kwargs={"literal_binds": True})
+    ), reindent=True)
 
 
 def print_sqla(query_or_exp):

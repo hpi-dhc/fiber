@@ -1,17 +1,17 @@
 from typing import Set
 
-import pandas as pd
 from sqlalchemy import (
     func,
     orm,
     sql,
 )
-from contexttimer import Timer
 
 from fiber import VERBOSE
 from fiber.condition.base import BaseCondition
+from fiber.database import read_with_progress
 from fiber.database.hana import session_scope, compile_sqla
 from fiber.database.table import Table
+from fiber.utils import Timer
 
 
 def _case_insensitive_like(column, value):
@@ -78,9 +78,11 @@ class DatabaseCondition(BaseCondition):
             q = q.with_session(session)
 
             print(f'Executing: {compile_sqla(q)}')
-            with Timer() as t:
-                result = set(mrn[0] for mrn in q.all())
-            print(f'Execution time: {t.elapsed:.2f}s')
+            mrn_df = read_with_progress(q.statement, session.connection())
+            result = set(
+                mrn for mrn in
+                mrn_df.iloc[:, 0]
+            )
             return result
 
     def get_data(self, inclusion_mrns=None, limit=None):
@@ -97,10 +99,9 @@ class DatabaseCondition(BaseCondition):
                 if limit > 0:
                     q = q.limit(limit)
                 q = q.with_entities(*self.data_columns).distinct()
-
-                with Timer() as t:
-                    result = pd.read_sql(q.statement, session.connection())
-                print(f'Execution time: {t.elapsed:.2f}s')
+                # print(f'Executing: {compile_sqla(q)}')
+                result = read_with_progress(
+                    q.statement, session.connection())
                 self._data_cache[request_hash] = result
 
         return self._data_cache[request_hash]
@@ -123,7 +124,7 @@ class DatabaseCondition(BaseCondition):
             ).with_session(session)
 
             print(f'Executing: {compile_sqla(q)}')
-            return pd.read_sql(q.statement, session.connection())
+            return read_with_progress(q.statement, session.connection())
 
     def distinct(self, *columns):
         if not columns:
@@ -134,7 +135,7 @@ class DatabaseCondition(BaseCondition):
             q = q.with_entities(*columns).distinct().with_session(session)
 
             print(f'Executing: {compile_sqla(q)}')
-            return pd.read_sql(q.statement, session.connection())
+            return read_with_progress(q.statement, session.connection())
 
     def __or__(self, other):
         if (
