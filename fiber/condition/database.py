@@ -9,7 +9,11 @@ from sqlalchemy import (
 from fiber import VERBOSE
 from fiber.condition.base import BaseCondition
 from fiber.database import read_with_progress
-from fiber.database.hana import session_scope, compile_sqla
+from fiber.database.hana import (
+    engine,
+    compile_sqla,
+    session_scope,
+)
 from fiber.database.table import Table
 from fiber.utils import Timer
 
@@ -21,6 +25,8 @@ def _case_insensitive_like(column, value):
 
 
 class DatabaseCondition(BaseCondition):
+
+    engine = engine
 
     def __init__(
         self,
@@ -71,19 +77,18 @@ class DatabaseCondition(BaseCondition):
         raise NotImplementedError
 
     def _fetch_mrns(self, limit=None):
-        with session_scope() as session:
-            q = self.create_query()
-            if limit:
-                q = q.limit(limit)
-            q = q.with_session(session)
+        q = self.create_query()
+        if limit:
+            q = q.limit(limit)
 
-            print(f'Executing: {compile_sqla(q)}')
-            mrn_df = read_with_progress(q.statement, session.connection())
-            result = set(
-                mrn for mrn in
-                mrn_df.iloc[:, 0]
-            )
-            return result
+        print(f'Executing: {compile_sqla(q)}')
+        mrn_df = read_with_progress(q.statement, self.engine)
+        assert len(mrn_df.columns) == 1, "create_query should return only MRNs"
+        result = set(
+            mrn for mrn in
+            mrn_df.iloc[:, 0]
+        )
+        return result
 
     def get_data(self, inclusion_mrns=None, limit=None):
         request_hash = (
@@ -92,17 +97,16 @@ class DatabaseCondition(BaseCondition):
         )
 
         if request_hash not in self._data_cache:
-            with session_scope() as session:
-                q = self.create_query()
-                if inclusion_mrns:
-                    q = q.filter(self.mrn_column.in_(inclusion_mrns))
-                if limit > 0:
-                    q = q.limit(limit)
-                q = q.with_entities(*self.data_columns).distinct()
-                # print(f'Executing: {compile_sqla(q)}')
-                result = read_with_progress(
-                    q.statement, session.connection())
-                self._data_cache[request_hash] = result
+            q = self.create_query()
+            if inclusion_mrns:
+                q = q.filter(self.mrn_column.in_(inclusion_mrns))
+            if limit:
+                q = q.limit(limit)
+            q = q.with_entities(*self.data_columns).distinct()
+            # print(f'Executing: {compile_sqla(q)}')
+            result = read_with_progress(
+                q.statement, self.engine)
+            self._data_cache[request_hash] = result
 
         return self._data_cache[request_hash]
 
@@ -113,29 +117,27 @@ class DatabaseCondition(BaseCondition):
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
 
-        with session_scope() as session:
-            q = self.create_query()
-            q = q.group_by(
-                *columns
-            ).with_entities(
-                *columns
-            ).order_by(
-                func.count(self.mrn_column).label('count').desc()
-            ).with_session(session)
+        q = self.create_query()
+        q = q.group_by(
+            *columns
+        ).with_entities(
+            *columns
+        ).order_by(
+            func.count(self.mrn_column).label('count').desc()
+        )
 
-            print(f'Executing: {compile_sqla(q)}')
-            return read_with_progress(q.statement, session.connection())
+        print(f'Executing: {compile_sqla(q)}')
+        return read_with_progress(q.statement, self.engine)
 
     def distinct(self, *columns):
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
 
-        with session_scope() as session:
-            q = self.create_query()
-            q = q.with_entities(*columns).distinct().with_session(session)
+        q = self.create_query()
+        q = q.with_entities(*columns).distinct()
 
-            print(f'Executing: {compile_sqla(q)}')
-            return read_with_progress(q.statement, session.connection())
+        print(f'Executing: {compile_sqla(q)}')
+        return read_with_progress(q.statement, self.engine)
 
     def __or__(self, other):
         if (
@@ -179,5 +181,5 @@ class DatabaseCondition(BaseCondition):
                 q = self.create_query().with_session(session)
                 print(f'Executing: {compile_sqla(q)}')
                 count = q.count()
-                print(f'Execution time: {t.elapsed:.2f}s')
-                return count
+            print(f'Execution time: {t.elapsed:.2f}s')
+            return count
