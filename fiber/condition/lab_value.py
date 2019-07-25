@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import orm
+from sqlalchemy import orm, sql
 
 from fiber.database.table import epic_lab
 from fiber.condition import DatabaseCondition
@@ -21,14 +21,26 @@ class LabValue(DatabaseCondition):
 
     def __init__(
         self,
-        test_name: str = '',
+        name: str = '',
         **kwargs
     ):
         super().__init__(**kwargs)
+        self.name = name
 
-        if test_name:
-            self.clause &= _case_insensitive_like(epic_lab.TEST_NAME,
-                                                  test_name)
+    def __getstate__(self):
+        return {
+            'class': self.__class__.__name__,
+            'attributes': {
+                'name': self.name,
+            },
+        }
+
+    def create_clause(self):
+        clause = sql.true()
+        if self.name:
+            clause &= _case_insensitive_like(epic_lab.TEST_NAME,
+                                             self.name)
+        return clause
 
     def create_query(self):
         return orm.Query(self.base_table).filter(

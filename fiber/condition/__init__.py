@@ -1,3 +1,4 @@
+from .base import BaseCondition
 from .database import DatabaseCondition
 from .fact import (
     Diagnosis,
@@ -11,6 +12,7 @@ from .lab_value import LabValue
 from .mrns import MRNS
 
 __all__ = [
+    'BaseCondition',
     'DatabaseCondition',
     'Diagnosis',
     'Material',
