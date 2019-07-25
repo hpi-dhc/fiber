@@ -17,7 +17,6 @@ from fiber.database.table import d_pers
 class Cohort:
 
     def __init__(self, condition: BaseCondition, limit=None):
-
         self._condition = condition
         self._lab_results = None
         self._excluded_mrns = set()

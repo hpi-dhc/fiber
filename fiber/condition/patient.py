@@ -1,7 +1,7 @@
-from sqlalchemy import orm, extract
+from sqlalchemy import orm, extract, sql
 
 from fiber.database.table import d_pers, fact
-from fiber.condition import DatabaseCondition
+from fiber.condition import DatabaseCondition, BaseCondition
 from fiber.condition.database import _case_insensitive_like
 
 
@@ -30,23 +30,43 @@ class Patient(DatabaseCondition):
         **kwargs
     ):
         super().__init__(**kwargs)
+        self.gender = gender
+        self.religion = religion
+        self.race = race
 
-        if gender:
-            self.clause &= _case_insensitive_like(d_pers.GENDER, gender)
-        if religion:
-            self.clause &= _case_insensitive_like(d_pers.RELIGION, religion)
-        if race:
-            self.clause &= _case_insensitive_like(d_pers.RACE, race)
+    def create_clause(self):
+        clause = sql.true()
+        if self.gender:
+            clause &= _case_insensitive_like(d_pers.GENDER, self.gender)
+        if self.religion:
+            clause &= _case_insensitive_like(d_pers.RELIGION, self.religion)
+        if self.race:
+            clause &= _case_insensitive_like(d_pers.RACE, self.race)
 
         # cast(extract('year', dp.DATE_OF_BIRTH),sqlalchemy.Integer) != 1066
         # currentYear = datetime.datetime.now().year
+        return clause
+
+    def __getstate__(self):
+        if self.children:
+            return BaseCondition.__getstate__(self)
+        else:
+            return {
+                'class': self.__class__.__name__,
+                'attributes': {
+                    'gender': self.gender,
+                    'religion': self.religion,
+                    'race': self.race,
+                },
+            }
+
     def create_query(self):
         return orm.Query(self.base_table).filter(
             self.clause
         ).filter(
             d_pers.ACTIVE_FLAG == 'Y'
         ).with_entities(
-                self.mrn_column
+            self.mrn_column
         ).distinct()
 
     def __and__(self, other):
@@ -56,11 +76,13 @@ class Patient(DatabaseCondition):
         '''
         if (
             isinstance(other, Patient)
-            and not (self._cached_mrns or other._cached_mrns)
+            and not (self._mrns or other._mrns)
         ):
             return self.__class__(
                 dimensions=self.dimensions | other.dimensions,
                 clause=self.clause & other.clause,
+                children=[self, other],
+                operator=BaseCondition.AND,
             )
         else:
             return super().__and__(self, other)

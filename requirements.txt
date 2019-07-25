@@ -1,3 +1,4 @@
+cachetools==3.1.1
 pandas==0.24.2
 pyhdb @ git+https://github.com/philipp-bode/PyHDB.git@master
 PyMySQL==0.9.3

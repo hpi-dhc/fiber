@@ -4,10 +4,12 @@ from functools import reduce
 import pandas as pd
 from sqlalchemy import (
     orm,
+    sql,
 )
+from sqlalchemy.ext.serializer import dumps
 
 from fiber import DEFAULT_STORE_FILE_PATH
-from fiber.condition import DatabaseCondition
+from fiber.condition import DatabaseCondition, BaseCondition
 from fiber.condition.database import _case_insensitive_like
 from fiber.database.table import (
     d_pers,
@@ -44,23 +46,12 @@ class FactCondition(DatabaseCondition):
     ):
         if 'dimensions' not in kwargs:
             kwargs['dimensions'] = self.dimensions
-
         super().__init__(**kwargs)
-
-        # (TODO) Think about == Syntax vs Constructor args.
-        # if field:
-        #     self._column =
-        # else:
-        if context:
-            self.clause &= self.d_table.CONTEXT_NAME.like(context)
-        if category:
-            self.clause &= _case_insensitive_like(
-                self.category, category)
-        if code:
-            self.clause &= self.code.like(code)
-        if description:
-            self.clause &= _case_insensitive_like(
-                self.description, description)
+        self.context = context
+        self.category = category
+        self.code = code
+        self.description = description
+        self.with_clauses = []
 
     @property
     def d_table(self):
@@ -68,21 +59,57 @@ class FactCondition(DatabaseCondition):
         raise NotImplementedError
 
     @property
-    def code(self):
+    def code_column(self):
         """"""
         raise NotImplementedError
 
     @property
-    def description(self):
+    def description_column(self):
         """"""
         raise NotImplementedError
+
+    @property
+    def category_column(self):
+        """"""
+        raise NotImplementedError
+
+    def __getstate__(self):
+        if self.children:
+            return BaseCondition.__getstate__(self)
+        else:
+            return {
+                'class': self.__class__.__name__,
+                'attributes': {
+                    'context': self.context,
+                    'category': self.category,
+                    'code': self.code,
+                    'description': self.description,
+                },
+                'with': [str(dumps(c)) for c in self.with_clauses],
+            }
+
+    def create_clause(self):
+        clause = sql.true()
+        if self.context:
+            clause &= self.d_table.CONTEXT_NAME.like(self.context)
+        if self.category:
+            clause &= _case_insensitive_like(
+                self.category_column, self.category)
+        if self.code:
+            clause &= self.code_column.like(self.code)
+        if self.description:
+            clause &= _case_insensitive_like(
+                self.description_column, self.description)
+        for c in self.with_clauses:
+            clause &= c
+        return clause
 
     def create_query(self):
         q = orm.Query(self.base_table).join(
             d_pers,
             self.base_table.person_key == d_pers.person_key
         ).with_entities(
-                d_pers.MEDICAL_RECORD_NUMBER
+            d_pers.MEDICAL_RECORD_NUMBER
         ).distinct()
 
         q = q.filter(self.clause)
@@ -110,7 +137,7 @@ class FactCondition(DatabaseCondition):
         return q
 
     def with_(self, add_clause):
-        self.clause &= add_clause
+        self.with_clauses.append(add_clause)
         return self
 
 
@@ -118,15 +145,15 @@ class Procedure(FactCondition):
 
     dimensions = {'PROCEDURE'}
     d_table = fd_proc
-    code = fd_proc.CONTEXT_PROCEDURE_CODE
-    category = fd_proc.PROCEDURE_TYPE
-    description = fd_proc.PROCEDURE_DESCRIPTION
+    code_column = fd_proc.CONTEXT_PROCEDURE_CODE
+    category_column = fd_proc.PROCEDURE_TYPE
+    description_column = fd_proc.PROCEDURE_DESCRIPTION
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         d_table.CONTEXT_NAME,
-        code
+        code_column
     ]
 
 
@@ -134,15 +161,15 @@ class Diagnosis(FactCondition):
 
     dimensions = {'DIAGNOSIS'}
     d_table = fd_diag
-    code = fd_diag.CONTEXT_DIAGNOSIS_CODE
-    category = fd_diag.DIAGNOSIS_TYPE
-    description = fd_diag.DESCRIPTION
+    code_column = fd_diag.CONTEXT_DIAGNOSIS_CODE
+    category_column = fd_diag.DIAGNOSIS_TYPE
+    description_column = fd_diag.DESCRIPTION
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         d_table.CONTEXT_NAME,
-        code
+        code_column
     ]
 
     @classmethod
@@ -180,15 +207,15 @@ class Material(FactCondition):
 
     dimensions = {'MATERIAL'}
     d_table = fd_mat
-    code = fd_mat.CONTEXT_MATERIAL_CODE
-    category = fd_mat.MATERIAL_TYPE
-    description = fd_mat.MATERIAL_NAME
+    code_column = fd_mat.CONTEXT_MATERIAL_CODE
+    category_column = fd_mat.MATERIAL_TYPE
+    description_column = fd_mat.MATERIAL_NAME
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
         d_table.CONTEXT_NAME,
-        code
+        code_column
     ]
 
 
@@ -205,33 +232,61 @@ class VitalSign(Procedure):
         d_uom.UNIT_OF_MEASURE
     ]
 
-    def __init__(self, description, **kwargs):
+    def __init__(self, description: str = '', **kwargs):
         kwargs['category'] = 'Vital Signs'
         kwargs['description'] = description
         super().__init__(**kwargs)
+        self.condition_operation = None
+        self.condition_value = None
+
+    def create_clause(self):
+        clause = super().create_clause()
+        if self.condition_operation:
+            clause &= getattr(fact.VALUE, self.condition_operation)(
+                              self.condition_value)
+        return clause
+
+    # Defining __eq__ removes __hash__  because the hashes have to be equal
+    def __hash__(self):
+        """Returns a unique hash for the condition definition."""
+        return super().__hash__()
+
+    def __getstate__(self):
+        json = super().__getstate__()
+        json['condition'] = {
+            'operation': self.condition_operation,
+            'value': self.condition_value,
+        }
+        return json
 
     def __lt__(self, other):
-        self.clause &= getattr(fact.VALUE, '__lt__')(other)
+        self.condition_operation = '__lt__'
+        self.condition_value = other
         return self
 
     def __le__(self, other):
-        self.clause &= getattr(fact.VALUE, '__le__')(other)
+        self.condition_operation = '__le__'
+        self.condition_value = other
         return self
 
     def __eq__(self, other):
-        self.clause &= getattr(fact.VALUE, '__eq__')(other)
+        self.condition_operation = '__eq__'
+        self.condition_value = other
         return self
 
     def __ne__(self, other):
-        self.clause &= getattr(fact.VALUE, '__ne__')(other)
+        self.condition_operation = '__ne__'
+        self.condition_value = other
         return self
 
     def __gt__(self, other):
-        self.clause &= getattr(fact.VALUE, '__gt__')(other)
+        self.condition_operation = '__gt__'
+        self.condition_value = other
         return self
 
     def __ge__(self, other):
-        self.clause &= getattr(fact.VALUE, '__ge__')(other)
+        self.condition_operation = '__ge__'
+        self.condition_value = other
         return self
 
 
@@ -239,13 +294,21 @@ class Drug(Material):
 
     def __init__(self, name: str = '', *args, **kwargs):
         kwargs['category'] = 'Drug'
-
         super().__init__(*args, **kwargs)
+        self.name = name
 
-        if name:
-            self.clause &= (
-                fd_mat.MATERIAL_NAME.like(name) |
-                fd_mat.GENERIC_NAME.like(name) |
-                fd_mat.BRAND1.like(name) |
-                fd_mat.BRAND2.like(name)
+    def create_clause(self):
+        clause = super().create_clause()
+        if self.name:
+            clause &= (
+                fd_mat.MATERIAL_NAME.like(self.name) |
+                fd_mat.GENERIC_NAME.like(self.name) |
+                fd_mat.BRAND1.like(self.name) |
+                fd_mat.BRAND2.like(self.name)
             )
+        return clause
+
+    def __getstate__(self):
+        json = super().__getstate__()
+        json['attributes']['name'] = self.name
+        return json

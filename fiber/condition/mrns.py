@@ -11,4 +11,12 @@ class MRNS(BaseCondition):
         if isinstance(mrns, set):
             mrns = list(mrns)
         mrns = set(map(str, mrns))
-        self._cached_mrns = mrns or set()
+        self._mrns = mrns or set()
+
+    def __getstate__(self):
+        return {
+            'class': self.__class__.__name__,
+            'attributes': {
+                'mrns': sorted(list(self._mrns))
+            }
+        }

@@ -12,10 +12,8 @@ from fiber.database import read_with_progress
 from fiber.database.hana import (
     engine,
     compile_sqla,
-    session_scope,
 )
 from fiber.database.table import Table
-from fiber.utils import Timer
 
 
 def _case_insensitive_like(column, value):
@@ -34,13 +32,13 @@ class DatabaseCondition(BaseCondition):
         dimensions: Set[str] = None,
         clause=None,
         data_columns=None,
+        **kwargs
     ):
-        self._cached_mrns = mrns or set()
+        super().__init__(**kwargs)
         self.dimensions = dimensions or set()
         # sql.true() acts as an 'empty' initializer for the clause
-        self.clause = sql.true() if clause is None else clause
+        self._clause = sql.true() if clause is None else clause
         self._specified_columns = data_columns or []
-
         self._data_cache = {}
 
     @property
@@ -68,6 +66,18 @@ class DatabaseCondition(BaseCondition):
         """Returns the column selection for fetching data points."""
         return self._specified_columns or self._default_columns
 
+    @property
+    def clause(self):
+        """Returns the clause of the current condition or creates the clause"""
+        if not isinstance(self._clause, sql.elements.True_):
+            return self._clause
+        else:
+            return self.create_clause()
+
+    def create_clause(self):
+        """Should create a SQLAlchemy clause for the specfic condition"""
+        raise NotImplementedError
+
     def create_query(self) -> orm.Query:
         """Should return an instance of a base query.
 
@@ -90,25 +100,17 @@ class DatabaseCondition(BaseCondition):
         )
         return result
 
-    def get_data(self, inclusion_mrns=None, limit=None):
-        request_hash = (
-            hash(frozenset(inclusion_mrns or {'All'})),
-            hash(frozenset(set(self.data_columns))),
-        )
-
-        if request_hash not in self._data_cache:
-            q = self.create_query()
-            if inclusion_mrns:
-                q = q.filter(self.mrn_column.in_(inclusion_mrns))
-            if limit:
-                q = q.limit(limit)
-            q = q.with_entities(*self.data_columns).distinct()
-            # print(f'Executing: {compile_sqla(q)}')
-            result = read_with_progress(
-                q.statement, self.engine)
-            self._data_cache[request_hash] = result
-
-        return self._data_cache[request_hash]
+    def _fetch_data(self, inclusion_mrns=None, limit=None):
+        q = self.create_query()
+        if inclusion_mrns:
+            q = q.filter(self.mrn_column.in_(inclusion_mrns))
+        if limit:
+            q = q.limit(limit)
+        q = q.with_entities(*self.data_columns).distinct()
+        # print(f'Executing: {compile_sqla(q)}')
+        result = read_with_progress(
+            q.statement, self.engine)
+        return result
 
     def example_values(self):
         return self.get_data(limit=10)
@@ -142,7 +144,7 @@ class DatabaseCondition(BaseCondition):
     def __or__(self, other):
         if (
             self.base_table == other.base_table
-            and not (self._cached_mrns or other._cached_mrns)
+            and not (self._mrns or other._mrns)
         ):
             unique_columns = []
             for col in (self.data_columns+other.data_columns):
@@ -153,33 +155,30 @@ class DatabaseCondition(BaseCondition):
                 dimensions=self.dimensions | other.dimensions,
                 clause=self.clause | other.clause,
                 data_columns=unique_columns,
+                children=[self, other],
+                operator=BaseCondition.OR,
             )
         else:
-            return BaseCondition(mrns=self.get_mrns() | other.get_mrns())
+            return BaseCondition(
+                mrns=self.get_mrns() | other.get_mrns(),
+                children=[self, other],
+                operator=BaseCondition.OR,
+            )
 
     def __and__(self, other):
         return self.__class__(
             mrns=self.get_mrns() & other.get_mrns(),
             dimensions=self.dimensions | other.dimensions,
+            children=[self, other],
+            operator=BaseCondition.AND,
         )
 
     def __repr__(self):
-        if self._cached_mrns:
+        if self._mrns:
             return f'{self.__class__.__name__}: {len(self.get_mrns())} mrns'
         else:
             clause = compile_sqla(self.clause) if VERBOSE else '...'
             return (
-                f'{self.__class__.__name__}( '
-                f'Not yet executed: {clause})'
+                f'{self.__class__.__name__} '
+                f'({clause})'
             )
-
-    def __len__(self):
-        if self._cached_mrns:
-            return len(self.get_mrns())
-        else:
-            with session_scope() as session, Timer() as t:
-                q = self.create_query().with_session(session)
-                print(f'Executing: {compile_sqla(q)}')
-                count = q.count()
-            print(f'Execution time: {t.elapsed:.2f}s')
-            return count
