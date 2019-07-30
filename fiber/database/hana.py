@@ -3,7 +3,6 @@ import pickle
 from contextlib import contextmanager
 from getpass import getpass
 
-import sqlparse
 from sqlalchemy import (
     create_engine,
     MetaData,
@@ -51,14 +50,3 @@ def get_meta():
         with open(cache_file, 'wb') as handle:
             pickle.dump(meta, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return meta
-
-
-def compile_sqla(query_or_exp):
-    compileable = getattr(query_or_exp, 'statement', query_or_exp)
-    return sqlparse.format(str(
-        compileable.compile(engine, compile_kwargs={"literal_binds": True})
-    ), reindent=True)
-
-
-def print_sqla(query_or_exp):
-    print(compile_sqla(query_or_exp))

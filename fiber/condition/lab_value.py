@@ -16,22 +16,26 @@ class LabValue(DatabaseCondition):
         epic_lab.ABNORMAL_FLAG,
         epic_lab.RESULT_FLAG,
         epic_lab.TEST_RESULT_VALUE,
+        epic_lab.unit_of_measurement
     ]
     mrn_column = epic_lab.MEDICAL_RECORD_NUMBER
 
     def __init__(
         self,
         name: str = '',
+        abnormal: bool = None,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.name = name
+        self.abnormal = abnormal
 
     def __getstate__(self):
         return {
             'class': self.__class__.__name__,
             'attributes': {
                 'name': self.name,
+                'abnormal': self.abnormal,
             },
         }
 
@@ -40,6 +44,12 @@ class LabValue(DatabaseCondition):
         if self.name:
             clause &= _case_insensitive_like(epic_lab.TEST_NAME,
                                              self.name)
+        if self.abnormal is not None:
+            clause &= (
+                epic_lab.ABNORMAL_FLAG == 'Y' if self.abnormal
+                else epic_lab.ABNORMAL_FLAG != 'Y'
+            )
+
         return clause
 
     def create_query(self):

@@ -234,7 +234,8 @@ class VitalSign(Procedure):
 
     def __init__(self, description: str = '', **kwargs):
         kwargs['category'] = 'Vital Signs'
-        kwargs['description'] = description
+        if description:
+            kwargs['description'] = description
         super().__init__(**kwargs)
         self.condition_operation = None
         self.condition_value = None
@@ -301,10 +302,10 @@ class Drug(Material):
         clause = super().create_clause()
         if self.name:
             clause &= (
-                fd_mat.MATERIAL_NAME.like(self.name) |
-                fd_mat.GENERIC_NAME.like(self.name) |
-                fd_mat.BRAND1.like(self.name) |
-                fd_mat.BRAND2.like(self.name)
+                _case_insensitive_like(fd_mat.MATERIAL_NAME, self.name) |
+                _case_insensitive_like(fd_mat.GENERIC_NAME, self.name) |
+                _case_insensitive_like(fd_mat.BRAND1, self.name) |
+                _case_insensitive_like(fd_mat.BRAND2, self.name)
             )
         return clause
 

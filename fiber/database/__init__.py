@@ -1,35 +1,62 @@
-import sqlalchemy
-import pandas as pd
+import sys
 
-from fiber import VERBOSE
+import sqlparse
+import pandas as pd
+import pyhdb
+from pyhdb.protocol.constants.general import MAX_MESSAGE_SIZE
+
+
+import fiber
 from fiber.utils import tqdm, Timer
 
 # DO NOT INCREASE THE CHUNK SIZE BEYOND THIS SIZE
 # The Hana client will fail silently, returning only a subset of rows
 READ_CHUNK_SIZE = 30_000
 
-
-def _check_for_message_size_overflow(e):
-    if 'Parameter row too large' in str(e.orig):
-        raise RuntimeError(
-            'Your statement had too many parameters to be handled '
-            'by the database client.\n'
-            'Increase the MAX_MESSAGE_SIZE in your PyHDB installation.'
-        )
+MESSAGE_OVERFLOW_ERROR = RuntimeError(
+    'Your statement was too large to be handled by the hana client.\n'
+    'Increase the MAX_MESSAGE_SIZE in your PyHDB installation.'
+)
 
 
-def read_with_progress(statement, engine):
+def compile_sqla(query_or_clause, engine):
+    compileable = getattr(query_or_clause, 'statement', query_or_clause)
+    compiled = str(compileable.compile(
+        engine, compile_kwargs={"literal_binds": True}))
 
-    with Timer() as t:
-        try:
-            chunks = pd.read_sql(
-                statement, con=engine, chunksize=READ_CHUNK_SIZE)
-            result = pd.concat([
-                x for x
-                in tqdm(chunks, disable=(not VERBOSE))
-            ])
-        except sqlalchemy.exc.DataError as e:
-            _check_for_message_size_overflow(e)
+    return compiled
 
-    print(f'Execution time: {t.elapsed:.2f}s')
+
+def print_sqla(query_or_clause, engine):
+    print(sqlparse.format(
+        compile_sqla(query_or_clause, engine),
+        reindent=True
+    ))
+
+
+def read_with_progress(query_or_statement, engine, silent=False):
+
+    if not isinstance(query_or_statement, str):
+        # Explicitly compile to check for message size overflow
+        # and avoid parameter limit of prepared statements.
+        query_or_statement = compile_sqla(query_or_statement, engine)
+
+    if (
+        engine.dialect.dbapi is pyhdb
+        and sys.getsizeof(query_or_statement) > MAX_MESSAGE_SIZE
+    ):
+        raise MESSAGE_OVERFLOW_ERROR
+
+    if fiber.VERBOSE and not silent:
+        print(sqlparse.format(query_or_statement, reindent=True))
+
+    with Timer('Execution'):
+        chunks = pd.read_sql_query(
+            query_or_statement, con=engine, chunksize=READ_CHUNK_SIZE)
+    with Timer('Fetching'):
+        result = pd.concat([
+            x for x
+            in tqdm(chunks)
+        ])
+
     return result

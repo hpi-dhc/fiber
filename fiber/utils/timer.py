@@ -3,8 +3,13 @@ import time
 
 class Timer:
 
-    def __init__(self):
-        self.elapsed = -1
+    def __init__(self, name: str = ''):
+        self.name = name
+        self.end = None
+
+    @property
+    def elapsed(self):
+        return (self.end or time.time()) - self.start
 
     def __enter__(self):
         self.start = time.time()
@@ -12,7 +17,8 @@ class Timer:
 
     def __exit__(self, *args):
         self.end = time.time()
-        self.elapsed = self.end - self.start
+        if self.name:
+            print(f'{self.name} time: {self.elapsed:.2f}s')
 
     def __repr__(self):
         return f'Timer({self.elapsed:.4f}s)'

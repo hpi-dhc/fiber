@@ -6,13 +6,13 @@ from sqlalchemy import (
     sql,
 )
 
-from fiber import VERBOSE
+import fiber
 from fiber.condition.base import BaseCondition
-from fiber.database import read_with_progress
-from fiber.database.hana import (
-    engine,
+from fiber.database import (
     compile_sqla,
+    read_with_progress,
 )
+from fiber.database.hana import engine
 from fiber.database.table import Table
 
 
@@ -91,7 +91,6 @@ class DatabaseCondition(BaseCondition):
         if limit:
             q = q.limit(limit)
 
-        print(f'Executing: {compile_sqla(q)}')
         mrn_df = read_with_progress(q.statement, self.engine)
         assert len(mrn_df.columns) == 1, "create_query should return only MRNs"
         result = set(
@@ -107,15 +106,25 @@ class DatabaseCondition(BaseCondition):
         if limit:
             q = q.limit(limit)
         q = q.with_entities(*self.data_columns).distinct()
-        # print(f'Executing: {compile_sqla(q)}')
+
         result = read_with_progress(
-            q.statement, self.engine)
+            q.statement, self.engine, silent=True)
         return result
 
     def example_values(self):
         return self.get_data(limit=10)
 
-    def value_counts(self, *columns):
+    def values_per(self, *columns):
+        return self._grouped_count('*', *columns, label='values')
+
+    def patients_per(self, *columns):
+        return self._grouped_count(
+            self.mrn_column.distinct(),
+            *columns,
+            label='patients'
+        )
+
+    def _grouped_count(self, count_column, *columns, label=None):
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
 
@@ -125,10 +134,9 @@ class DatabaseCondition(BaseCondition):
         ).with_entities(
             *columns
         ).order_by(
-            func.count(self.mrn_column).label('count').desc()
+            func.count(count_column).label((label or 'count')).desc()
         )
 
-        print(f'Executing: {compile_sqla(q)}')
         return read_with_progress(q.statement, self.engine)
 
     def distinct(self, *columns):
@@ -138,7 +146,6 @@ class DatabaseCondition(BaseCondition):
         q = self.create_query()
         q = q.with_entities(*columns).distinct()
 
-        print(f'Executing: {compile_sqla(q)}')
         return read_with_progress(q.statement, self.engine)
 
     def __or__(self, other):
@@ -177,7 +184,10 @@ class DatabaseCondition(BaseCondition):
         if self._mrns:
             return f'{self.__class__.__name__}: {len(self.get_mrns())} mrns'
         else:
-            clause = compile_sqla(self.clause) if VERBOSE else '...'
+            clause = (
+                compile_sqla(self.clause, engine) if fiber.VERBOSE
+                else '...'
+            )
             return (
                 f'{self.__class__.__name__} '
                 f'({clause})'
