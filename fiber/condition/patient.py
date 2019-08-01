@@ -47,9 +47,9 @@ class Patient(DatabaseCondition):
         # currentYear = datetime.datetime.now().year
         return clause
 
-    def __getstate__(self):
+    def to_json(self):
         if self.children:
-            return BaseCondition.__getstate__(self)
+            return BaseCondition.to_json(self)
         else:
             return {
                 'class': self.__class__.__name__,
@@ -70,10 +70,10 @@ class Patient(DatabaseCondition):
         ).distinct()
 
     def __and__(self, other):
-        '''
+        """
         The Patient has its own __and__ function, because they can be easily
         combined. This optimizes performance.
-        '''
+        """
         if (
             isinstance(other, Patient)
             and not (self._mrns or other._mrns)

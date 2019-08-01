@@ -42,6 +42,7 @@ def get_meta():
     try:
         with open(cache_file, 'rb') as f:
             meta = pickle.load(f)
+        meta.bind = engine
     except FileNotFoundError:
         meta = MetaData(schema='MSDW_2018')
         meta.reflect(bind=engine)
