@@ -6,7 +6,6 @@ from sqlalchemy import (
     orm,
     sql,
 )
-from sqlalchemy.ext.serializer import dumps
 
 from fiber import DEFAULT_STORE_FILE_PATH
 from fiber.condition import DatabaseCondition, BaseCondition
@@ -47,11 +46,15 @@ class FactCondition(DatabaseCondition):
         if 'dimensions' not in kwargs:
             kwargs['dimensions'] = self.dimensions
         super().__init__(**kwargs)
+        if bool(code) ^ bool(context):
+            raise Exception(
+                f"{self.__class__.__name__} code or context missing. Example:"
+                f"{self.__class__.__name__}('035.%','ICD-9')")
+        self.code = code
         self.context = context
         self.category = category
-        self.code = code
         self.description = description
-        self.with_clauses = []
+        self.age_conditions = []
 
     @property
     def d_table(self):
@@ -73,9 +76,9 @@ class FactCondition(DatabaseCondition):
         """"""
         raise NotImplementedError
 
-    def __getstate__(self):
+    def to_json(self):
         if self.children:
-            return BaseCondition.__getstate__(self)
+            return BaseCondition.to_json(self)
         else:
             return {
                 'class': self.__class__.__name__,
@@ -85,8 +88,14 @@ class FactCondition(DatabaseCondition):
                     'code': self.code,
                     'description': self.description,
                 },
-                'with': [str(dumps(c)) for c in self.with_clauses],
+                'age_in_days': self.age_conditions,
             }
+
+    def from_json(self, json):
+        condition = super().from_json(json)
+        for a in json['age_in_days']:
+            condition.age_in_days(a['min_days'], a['max_days'])
+        return condition
 
     def create_clause(self):
         clause = sql.true()
@@ -100,8 +109,11 @@ class FactCondition(DatabaseCondition):
         if self.description:
             clause &= _case_insensitive_like(
                 self.description_column, self.description)
-        for c in self.with_clauses:
-            clause &= c
+        for a in self.age_conditions:
+            if a['min_days']:
+                clause &= fact.AGE_IN_DAYS >= a['min_days']
+            if a['max_days']:
+                clause &= fact.AGE_IN_DAYS < a['max_days']
         return clause
 
     def create_query(self):
@@ -136,8 +148,15 @@ class FactCondition(DatabaseCondition):
                 )
         return q
 
-    def with_(self, add_clause):
-        self.with_clauses.append(add_clause)
+    def age(self, min_age=None, max_age=None):
+        self.age_conditions.append(
+            {'min_days': 365 * min_age if min_age else None,
+             'max_days': 365 * max_age if max_age else None})
+        return self
+
+    def age_in_days(self, min_days=None, max_days=None):
+        self.age_conditions.append({'min_days': min_days,
+                                    'max_days': max_days})
         return self
 
 
@@ -252,13 +271,19 @@ class VitalSign(Procedure):
         """Returns a unique hash for the condition definition."""
         return super().__hash__()
 
-    def __getstate__(self):
-        json = super().__getstate__()
+    def to_json(self):
+        json = super().to_json()
         json['condition'] = {
             'operation': self.condition_operation,
             'value': self.condition_value,
         }
         return json
+
+    def from_json(self, json):
+        vitalsign = super().from_json(json)
+        getattr(vitalsign, json['condition']['operation'])(
+                           json['condition']['value'])
+        return vitalsign
 
     def __lt__(self, other):
         self.condition_operation = '__lt__'
@@ -309,7 +334,7 @@ class Drug(Material):
             )
         return clause
 
-    def __getstate__(self):
-        json = super().__getstate__()
+    def to_json(self):
+        json = super().to_json()
         json['attributes']['name'] = self.name
         return json

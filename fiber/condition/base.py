@@ -14,8 +14,8 @@ def _hash_request(instance, for_mrns={}, limit=None):
 
 
 class BaseCondition:
-    """The BaseCondition supplies a basic interface to combine sets of mrns.
-
+    """
+    The BaseCondition supplies a basic interface to combine sets of mrns.
     """
     OR = 'or'
     AND = 'and'
@@ -54,12 +54,6 @@ class BaseCondition:
         return hash(json_str)
 
     def to_json(self):
-        return self.__getstate__()
-
-    def from_json(self, json):
-        return self.__setstate__(json)
-
-    def __getstate__(self):
         """ Should be implemented by subclasses.
 
         Returns a json representation of the Condition.
@@ -70,11 +64,12 @@ class BaseCondition:
             self.operator: [c.to_json() for c in self.children]
         }
 
-    def __setstate__(self, dict):
+    def from_json(self, json):
         """
-        Should load the Conditions based on the json.
+        Should be implemented by subclasses.
+        Loads the Conditions based on the json.
         """
-        raise NotImplementedError
+        return self.__class__(**json['attributes'])
 
     def __or__(self, other):
         return BaseCondition(

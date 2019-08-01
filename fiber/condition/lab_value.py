@@ -30,7 +30,7 @@ class LabValue(DatabaseCondition):
         self.name = name
         self.abnormal = abnormal
 
-    def __getstate__(self):
+    def to_json(self):
         return {
             'class': self.__class__.__name__,
             'attributes': {

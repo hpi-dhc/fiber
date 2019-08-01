@@ -13,7 +13,7 @@ class MRNS(BaseCondition):
         mrns = set(map(str, mrns))
         self._mrns = mrns or set()
 
-    def __getstate__(self):
+    def to_json(self):
         return {
             'class': self.__class__.__name__,
             'attributes': {

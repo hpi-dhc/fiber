@@ -20,29 +20,26 @@ class Cohort:
         self._condition = condition
         self._lab_results = None
         self._excluded_mrns = set()
-        self._limit = limit
+        self._mrn_limit = limit
 
     def mrns(self):
-        return (self._condition.get_mrns(limit=self._limit)
+        return (self._condition.get_mrns(limit=self._mrn_limit)
                 - self._excluded_mrns)
 
     def get(self, *data_conditions, limit=None):
         data = []
 
+        # Group Data by BaseTable (:/ only works for DatabaseConditions)
         database_cond = defaultdict(list)
         for cond in data_conditions:
             if isinstance(cond, DatabaseCondition):
                 database_cond[cond.base_table].append(cond)
 
-        # (TODO) What might be better: Return a list of DataFrames for every
-        # data condition and don't merge them:
-        #
-        # for c in data_conditions:
-
+        # Get data per BaseTable
         for c in database_cond.values():
             c = reduce(DatabaseCondition.__or__, c)
 
-            print(f'Fetching data for {c}..')
+            print(f'Fetching data for {c}')
             data.append(c.get_data(self.mrns(), limit=limit))
         return data if len(data) > 1 else data[0]
 
@@ -106,11 +103,11 @@ class Cohort:
 
     @property
     def demographics(self):
-        '''
+        """
         Generates basic cohort demographics, such as mean and standard
         deviation for age and the gender distribution - including
         plots.
-        '''
+        """
         condition_events = self.get(self._condition)
         df_age = condition_events[
             condition_events.age_in_days < 50000
