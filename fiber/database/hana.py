@@ -1,5 +1,4 @@
 import os
-import pickle
 from contextlib import contextmanager
 from getpass import getpass
 
@@ -10,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import sessionmaker
 
 from fiber import CACHE_PATH
+from fiber.database.meta import add_tables
 
 
 PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
@@ -17,9 +17,9 @@ PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
 DATABASE_URI = ***REMOVED***
 
 engine = create_engine(DATABASE_URI)
-engine.execute('SET SCHEMA MSDW_2018;')
 
 Session = sessionmaker(bind=engine)
+session = Session()
 
 cache_file = os.path.join(CACHE_PATH, 'metadata.pkl')
 
@@ -38,16 +38,4 @@ def session_scope():
         session.close()
 
 
-def get_meta():
-    try:
-        with open(cache_file, 'rb') as f:
-            meta = pickle.load(f)
-        meta.bind = engine
-    except FileNotFoundError:
-        meta = MetaData(schema='MSDW_2018')
-        meta.reflect(bind=engine)
-
-        os.makedirs(CACHE_PATH)
-        with open(cache_file, 'wb') as handle:
-            pickle.dump(meta, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    return meta
+meta = add_tables(MetaData(bind=engine, schema='MSDW_2018'))

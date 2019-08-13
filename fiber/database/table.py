@@ -1,14 +1,12 @@
 from sqlalchemy.sql.schema import Table as SQLATable
 
-from fiber.database.hana import get_meta
-
-META = get_meta()
+from fiber.database import get_meta
 
 
 class Table(SQLATable):
 
     def __getattr__(self, attr):
-        attr = attr.lower()
+        attr = attr.upper()
 
         if attr in self.columns:
             return self.columns[attr]
@@ -16,13 +14,16 @@ class Table(SQLATable):
             raise AttributeError(f"Table {self.name} has no column {attr}")
 
     def __new__(cls, name):
-        table = META.tables[f'MSDW_2018.{name.lower()}']
+        meta = get_meta()
+        cls.META = meta
+        name = f'{meta.schema}.{name}' if meta.schema else name
+        table = cls.META.tables[f'{name}']
         table.__class__ = cls
 
         return table
 
 
-fact = Table('FACT2')
+fact = Table('FACT')
 
 b_proc = Table('B_PROCEDURE')
 fd_proc = Table('FD_PROCEDURE')

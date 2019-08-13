@@ -80,7 +80,8 @@ class TobaccoUse(MetaData):
 
     def to_json(self):
         json = super().to_json()
-        json['attributes']['map_values'] = self.map_values
+        if not self.children:
+            json['attributes']['map_values'] = self.map_values
         return json
 
 
