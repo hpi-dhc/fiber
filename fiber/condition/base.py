@@ -8,9 +8,12 @@ mrn_cache = {}
 data_cache = {}
 
 
-def _hash_request(instance, for_mrns={}, limit=None):
-    return hash(str(hash(instance)) + str(hash(frozenset(for_mrns)))
-                + str(limit))
+def _hash_request(instance, included_mrns=None, limit=None):
+    return hash(
+        str(hash(instance)) +
+        str(hash(frozenset(included_mrns or []))) +
+        str(limit)
+    )
 
 
 class BaseCondition:
@@ -41,17 +44,16 @@ class BaseCondition:
         raise NotImplementedError
 
     @cached(cache=data_cache, key=_hash_request)
-    def get_data(self, for_mrns, limit=None):
-        return self._fetch_data(for_mrns, limit=limit)
+    def get_data(self, included_mrns=None, limit=None):
+        return self._fetch_data(included_mrns, limit=limit)
 
-    def _fetch_data(self, limit=None):
+    def _fetch_data(self, included_mrns=None, limit=None):
         """Must be implemented by subclass to return relevant data."""
         raise NotImplementedError
 
     def __hash__(self):
         """Returns a unique hash for the condition definition."""
-        json_str = json.dumps(self.to_json()).encode("utf-8")
-        return hash(json_str)
+        return hash(json.dumps(self.to_json()))
 
     def to_json(self):
         """ Should be implemented by subclasses.

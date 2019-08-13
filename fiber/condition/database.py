@@ -75,7 +75,7 @@ class DatabaseCondition(BaseCondition):
             return self.create_clause()
 
     def create_clause(self):
-        """Should create a SQLAlchemy clause for the specfic condition"""
+        """Should create a SQLAlchemy clause for the specific condition"""
         raise NotImplementedError
 
     def create_query(self) -> orm.Query:
@@ -99,10 +99,10 @@ class DatabaseCondition(BaseCondition):
         )
         return result
 
-    def _fetch_data(self, inclusion_mrns=None, limit=None):
+    def _fetch_data(self, included_mrns=None, limit=None):
         q = self.create_query()
-        if inclusion_mrns:
-            q = q.filter(self.mrn_column.in_(inclusion_mrns))
+        if included_mrns:
+            q = q.filter(self.mrn_column.in_(included_mrns))
         if limit:
             q = q.limit(limit)
         q = q.with_entities(*self.data_columns).distinct()
