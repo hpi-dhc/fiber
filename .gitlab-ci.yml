@@ -19,7 +19,7 @@ before_script:
 test:
   script:
   - pip install --cache-dir=.pip tox
-  - tox -e py36,flake8,coverage,installation
+  - tox -re py36,flake8,coverage,installation
   coverage: '/TOTAL.*\s+(\d+%)$/'
 
 # run:
