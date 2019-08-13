@@ -20,7 +20,6 @@ class Patient(DatabaseCondition):
         d_pers.MOTHER_ACCOUNT_NUMBER,
         d_pers.ADDRESS_ZIP,
         d_pers.MARITAL_STATUS_CODE,
-        d_pers.ADDRESS_ZIP,
     ]
     mrn_column = d_pers.MEDICAL_RECORD_NUMBER
     age_in_days = fact.AGE_IN_DAYS
@@ -48,6 +47,7 @@ class Patient(DatabaseCondition):
         return clause
 
     def to_json(self):
+        # Condition is connected with AND/OR
         if self.children:
             return BaseCondition.to_json(self)
         else:

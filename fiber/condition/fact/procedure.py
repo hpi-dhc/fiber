@@ -58,10 +58,12 @@ class VitalSign(Procedure):
 
     def to_json(self):
         json = super().to_json()
-        json['condition'] = {
-            'operation': self.condition_operation,
-            'value': self.condition_value,
-        }
+        # Condition is connected with AND/OR
+        if not self.children:
+            json['condition'] = {
+                'operation': self.condition_operation,
+                'value': self.condition_value,
+            }
         return json
 
     def from_json(self, json):

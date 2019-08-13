@@ -12,7 +12,7 @@ from fiber.database import (
     compile_sqla,
     read_with_progress,
 )
-from fiber.database.hana import engine
+from fiber.database import get_engine
 from fiber.database.table import Table
 
 
@@ -23,8 +23,6 @@ def _case_insensitive_like(column, value):
 
 
 class DatabaseCondition(BaseCondition):
-
-    engine = engine
 
     def __init__(
         self,
@@ -40,6 +38,7 @@ class DatabaseCondition(BaseCondition):
         self._clause = sql.true() if clause is None else clause
         self._specified_columns = data_columns or []
         self._data_cache = {}
+        self.engine = get_engine()
 
     @property
     def base_table(self) -> Table:
@@ -185,7 +184,7 @@ class DatabaseCondition(BaseCondition):
             return f'{self.__class__.__name__}: {len(self.get_mrns())} mrns'
         else:
             clause = (
-                compile_sqla(self.clause, engine) if fiber.VERBOSE
+                compile_sqla(self.clause, self.engine) if fiber.VERBOSE
                 else '...'
             )
             return (

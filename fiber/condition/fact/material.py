@@ -43,5 +43,7 @@ class Drug(Material):
 
     def to_json(self):
         json = super().to_json()
-        json['attributes']['name'] = self.name
+        # Condition is connected with AND/OR
+        if not self.children:
+            json['attributes']['name'] = self.name
         return json

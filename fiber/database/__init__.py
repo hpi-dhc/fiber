@@ -1,4 +1,5 @@
 import sys
+from importlib import import_module
 
 import sqlparse
 import pandas as pd
@@ -8,6 +9,15 @@ from pyhdb.protocol.constants.general import MAX_MESSAGE_SIZE
 
 import fiber
 from fiber.utils import tqdm, Timer
+
+
+def get_engine():
+    return getattr(import_module(f'fiber.database.{fiber.MSDW_DB}'), 'engine')
+
+
+def get_meta():
+    return getattr(import_module(f'fiber.database.{fiber.MSDW_DB}'), 'meta')
+
 
 # DO NOT INCREASE THE CHUNK SIZE BEYOND THIS SIZE
 # The Hana client will fail silently, returning only a subset of rows
