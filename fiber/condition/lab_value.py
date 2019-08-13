@@ -59,8 +59,8 @@ class LabValue(DatabaseCondition):
             self.mrn_column
         ).distinct()
 
-    def get_data(self, inclusion_mrns=None, limit=None):
-        df = super().get_data(inclusion_mrns, limit=limit)
+    def _fetch_data(self, included_mrns=None, limit=None):
+        df = super()._fetch_data(included_mrns, limit=limit)
         prev = len(df)
         df['numeric_value'] = pd.to_numeric(
             df.test_result_value, errors='coerce')
