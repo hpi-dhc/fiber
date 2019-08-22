@@ -6,7 +6,11 @@ from fiber.condition.database import _case_insensitive_like
 
 
 class Patient(DatabaseCondition):
-
+    """
+    The patient is based of the DatabaseCondition and accesses the D_Person
+    table of MSDW. It contains general information about the patients.
+    (e.g. YEAR_OF_BIRTH, MONTH_OF_BIRTH, GENDER, ADDRESS_ZIP, ...)
+    """
     base_table = d_pers
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
@@ -28,6 +32,16 @@ class Patient(DatabaseCondition):
         self, gender=None, religion=None, race=None,
         **kwargs
     ):
+        """
+        :param String gender: The gender of the Patient (e.g. 'Male','Female')
+        :param String religion:
+            The religion of the Patient (e.g. 'Hindu','Catholic')
+        :param String race: The race of the Patient (e.g. 'Hispanic/Latino')
+
+        The string parameters are used in the SQL-LIKE statement after being
+        converted to uppercase. This means that  ``%``, ``_`` and  ``[]`` can
+        be used to more precisly select patients.
+        """
         super().__init__(**kwargs)
         self.gender = gender
         self.religion = religion
@@ -47,7 +61,7 @@ class Patient(DatabaseCondition):
         return clause
 
     def to_json(self):
-        # Condition is connected with AND/OR
+        # if self.children: <-> condition is connected with AND/OR
         if self.children:
             return BaseCondition.to_json(self)
         else:
@@ -71,8 +85,8 @@ class Patient(DatabaseCondition):
 
     def __and__(self, other):
         """
-        The Patient has its own __and__ function, because they can be easily
-        combined. This optimizes performance.
+        The Patient has its own __and__ function, because the SQL can be easily
+        combined to optimize performance.
         """
         if (
             isinstance(other, Patient)

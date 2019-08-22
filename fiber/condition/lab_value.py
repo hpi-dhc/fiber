@@ -7,7 +7,11 @@ from fiber.condition.database import _case_insensitive_like
 
 
 class LabValue(DatabaseCondition):
-
+    """
+    LabValue is based of Database condition and accesses the EPIC_LAB table it
+    contains information about laboratory test which are done for instance on
+    blood values.
+    """
     base_table = epic_lab
     _default_columns = [
         epic_lab.MEDICAL_RECORD_NUMBER,
@@ -26,6 +30,20 @@ class LabValue(DatabaseCondition):
         abnormal: bool = None,
         **kwargs
     ):
+        """
+        :param String name:
+            This is the name of the selected test (e.g. 'GLUCOSE',
+            'HEMOGLOBIN')
+        :param Bool abnormal:
+            If this is set the lab values will either only contain values that
+            are with in the expected range for a helthy person
+            (``abnormal=False``) or only return values that are abnormal
+            (``abnormal=True``)
+
+        The string parameters are used in the SQL-LIKE statement after being
+        converted to uppercase. This means that  ``%``, ``_`` and  ``[]`` can
+        be used to more precisly select patients.
+        """
         super().__init__(**kwargs)
         self.name = name
         self.abnormal = abnormal
@@ -60,6 +78,9 @@ class LabValue(DatabaseCondition):
         ).distinct()
 
     def _fetch_data(self, included_mrns=None, limit=None):
+        """
+        LabValue overwirtes ``._fetch_data()`` to simplify the result data.
+        """
         df = super()._fetch_data(included_mrns, limit=limit)
         df['test_result_value'] = pd.to_numeric(
             df.test_result_value, errors='coerce'
