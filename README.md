@@ -22,6 +22,10 @@ pip install -e .
 
 For a quick start, checkout [this iPython notebook](/notebooks/heart-surgery-demo.ipynb). We demonstrate the most important [Features](#features) in there.
 
+## Documentation
+
+For a more details have a look at the [documentation](/docs/readme.md).
+
 ## Features
 
 ### Cohort

@@ -45,6 +45,9 @@ def print_sqla(query_or_clause, engine):
 
 
 def read_with_progress(query_or_statement, engine, silent=False):
+    """
+    TEST
+    """
 
     if not isinstance(query_or_statement, str):
         # Explicitly compile to check for message size overflow
