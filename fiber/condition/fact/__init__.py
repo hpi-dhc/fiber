@@ -1,4 +1,5 @@
 from .diagnosis import Diagnosis
+from .encounter import Encounter
 from .material import (
     Drug,
     Material,
@@ -10,8 +11,11 @@ from .metadata import (
     TobaccoUse,
 )
 from .procedure import (
+    Height,
+    Measurement,
     Procedure,
     VitalSign,
+    Weight
 )
 
 __all__ = [
@@ -19,9 +23,13 @@ __all__ = [
     'Diagnosis',
     'Drug',
     'DrugUse',
+    'Encounter',
+    'Height',
     'Material',
+    'Measurement',
     'MetaData',
     'Procedure',
     'TobaccoUse',
     'VitalSign',
+    'Weight'
 ]
