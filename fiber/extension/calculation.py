@@ -6,10 +6,10 @@ def calc_e_gfr(creatinine_value, age, gender, race):
     https://www.ncbi.nlm.nih.gov/pubmed/19414839.
     This equation is only valid for adults.
     """
-    is_female = gender in ["Female"]
+    is_female = gender in ['Female']
     is_black = race in [
-        "Black Or African-American",
-        "African American (Black)"
+        'Black Or African-American',
+        'African American (Black)'
     ]
     alpha = -0.329 if is_female else -0.411
     k = 0.7 if is_female else 0.9

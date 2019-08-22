@@ -1,6 +1,7 @@
 import os
 
 __author__ = 'HPI FIBER Team'
+__version__ = '0.1.0'
 
 CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache')
 DEFAULT_STORE_FILE_PATH = os.path.join(

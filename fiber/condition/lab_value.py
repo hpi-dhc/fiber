@@ -61,10 +61,22 @@ class LabValue(DatabaseCondition):
 
     def _fetch_data(self, included_mrns=None, limit=None):
         df = super()._fetch_data(included_mrns, limit=limit)
-        prev = len(df)
-        df['numeric_value'] = pd.to_numeric(
-            df.test_result_value, errors='coerce')
+        df['test_result_value'] = pd.to_numeric(
+            df.test_result_value, errors='coerce'
+        )
+        df['abnormal_flag'] = pd.to_numeric(df.abnormal_flag == 'Y')
         df.dropna(inplace=True)
-        df['abnormal'] = df.abnormal_flag == 'Y'
-        print(f'Removed {prev-len(df)} non-numeric values.')
+
+        df['test_name'] = df['test_name'].astype('category')
+        df['result_flag'] = df['result_flag'].astype(
+            'category'
+        )
         return df
+
+    @property
+    def default_aggregations(self):
+        return {
+            'test_result_value': 'mean',
+            'abnormal_flag': 'any',
+            'result_flag': lambda x: pd.Series.mode(x)[0]
+        }

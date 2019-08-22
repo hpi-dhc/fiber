@@ -74,6 +74,12 @@ class FactCondition(DatabaseCondition):
         """"""
         raise NotImplementedError
 
+    @property
+    def default_aggregations(self):
+        return {
+            self.code_column.name.lower(): 'count'
+        }
+
     def to_json(self):
         if self.children:
             return BaseCondition.to_json(self)

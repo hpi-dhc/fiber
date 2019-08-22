@@ -6,13 +6,13 @@ from .fact import *  # noqa
 
 from .patient import Patient
 from .lab_value import LabValue
-from .mrns import MRNS
+from .mrns import MRNs
 
 __all__ = [
     'BaseCondition',
     'DatabaseCondition',
     'Patient',
     'LabValue',
-    'MRNS',
+    'MRNs',
 ]
 __all__.extend(fact.__all__)

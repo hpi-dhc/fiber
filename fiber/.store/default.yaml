@@ -1,16 +1,23 @@
-diagnosis:
+# Diagnoses derived from Elixhauser comorbidities (ICD-10, Enhanced ICD-9-CM)
+#
+# Quan H, Sundararajan V, Halfon P, et al. Coding algorithms for defining
+# Comorbidities in ICD-9-CM and ICD-10 administrative data. Med Care.
+# 2005 Nov; 43(11): 1130-9.
+
+# Available at: http://mchp-appserv.cpe.umanitoba.ca/concept/Elixhauser%20Comorbidities%20-%20Coding%20Algorithms%20for%20ICD-9-CM%20and%20ICD-10.pdf
+Diagnosis:
 - name: AIDS/HIV
-  icd10cm:
+  ICD-10:
     - B20.%
     - B21.%
     - B22.%
     - B24.%
-  icd9cm:
+  ICD-9:
     - 042.%
     - 043.%
     - 044.%
 - name: alcohol abuse
-  icd10cm:
+  ICD-10:
     - F10.%
     - E52.%
     - G62.1
@@ -23,7 +30,7 @@ diagnosis:
     - Z50.2
     - Z71.4
     - Z72.1
-  icd9cm:
+  ICD-9:
     - 265.2
     - 291.1
     - 291.2
@@ -45,13 +52,13 @@ diagnosis:
     - 571.3
     - 980.%
     - V11.3
-- name: blood loss anaemia
-  icd10cm:
+- name: blood loss anemia
+  ICD-10:
   - D50.0
-  icd9cm:
+  ICD-9:
   - 280.0
-- name: cardiac arrhythmias
-  icd10cm:
+- name: cardiac arrhythmia
+  ICD-10:
   - I44.1
   - I44.2
   - I44.3
@@ -66,7 +73,7 @@ diagnosis:
   - T82.1
   - Z45.0
   - Z95.0
-  icd9cm:
+  ICD-9:
   - 426.0
   - 426.13
   - 426.7
@@ -88,7 +95,7 @@ diagnosis:
   - V45.0
   - V53.3
 - name: chronic pulmonary disease
-  icd10cm:
+  ICD-10:
   - I27.8
   - I27.9
   - J40.%
@@ -110,7 +117,7 @@ diagnosis:
   - J68.4
   - J70.1
   - J70.3
-  icd9cm:
+  ICD-9:
   - 416.8
   - 416.9
   - 490.%
@@ -133,7 +140,7 @@ diagnosis:
   - 508.1
   - 508.8
 - name: coagulopathy
-  icd10cm:
+  ICD-10:
   - D65.%
   - D66.%
   - D67.%
@@ -143,14 +150,14 @@ diagnosis:
   - D69.4
   - D69.5
   - D69.6
-  icd9cm:
+  ICD-9:
   - 286.%
   - 287.1
   - 287.3
   - 287.4
   - 287.5
 - name: congestive heart failure
-  icd10cm:
+  ICD-10:
   - I09.9
   - I11.0
   - I13.0
@@ -165,7 +172,7 @@ diagnosis:
   - I43.%
   - I50.%
   - P29.0
-  icd9cm:
+  ICD-9:
   - 398.91
   - 402.01
   - 402.11
@@ -183,14 +190,14 @@ diagnosis:
   - 425.8
   - 425.9
   - 428.%
-- name: deficiency anaemia
-  icd10cm:
+- name: deficiency anemia
+  ICD-10:
   - D50.8
   - D50.9
   - D51.%
   - D52.%
   - D53.%
-  icd9cm:
+  ICD-9:
   - 280.1
   - 280.2
   - 280.3
@@ -202,7 +209,7 @@ diagnosis:
   - 280.9
   - 281.%
 - name: depression
-  icd10cm:
+  ICD-10:
   - F20.4
   - F31.3
   - F31.4
@@ -212,7 +219,7 @@ diagnosis:
   - F34.1
   - F41.2
   - F43.2
-  icd9cm:
+  ICD-9:
   - 296.2
   - 296.3
   - 296.5
@@ -220,7 +227,7 @@ diagnosis:
   - 309.%
   - 311
 - name: diabetes complicated
-  icd10cm:
+  ICD-10:
   - E10.2
   - E10.3
   - E10.4
@@ -256,7 +263,7 @@ diagnosis:
   - E14.6
   - E14.7
   - E14.8
-  icd9cm:
+  ICD-9:
   - 250.4
   - 250.5
   - 250.6
@@ -264,7 +271,7 @@ diagnosis:
   - 250.8
   - 250.9
 - name: diabetes uncomplicated
-  icd10cm:
+  ICD-10:
   - E10.0
   - E10.1
   - E10.9
@@ -280,13 +287,13 @@ diagnosis:
   - E14.0
   - E14.1
   - E14.9
-  icd9cm:
+  ICD-9:
   - 250.0
   - 250.1
   - 250.2
   - 250.3
 - name: drug abuse
-  icd10cm:
+  ICD-10:
   - F11.%
   - F12.%
   - F13.%
@@ -297,7 +304,7 @@ diagnosis:
   - F19.%
   - Z71.5
   - Z72.2
-  icd9cm:
+  ICD-9:
   - 292.%
   - 304.%
   - 305.2
@@ -310,44 +317,44 @@ diagnosis:
   - 305.9
   - V65.42
 - name: fluid and electrolyte disorders
-  icd10cm:
+  ICD-10:
   - E22.2
   - E86.%
   - E87.%
-  icd9cm:
+  ICD-9:
   - 253.6
   - 276.%
 - name: hypertension complicated
-  icd10cm:
+  ICD-10:
   - I11.%
   - I12.%
   - I13.%
   - I15.%
-  icd9cm:
+  ICD-9:
   - 402.%
   - 403.%
   - 404.%
   - 405.%
 - name: hypertension uncomplicated
-  icd10cm:
+  ICD-10:
   - I10.%
-  icd9cm:
+  ICD-9:
   - 401.%
 - name: hypothyroidism
-  icd10cm:
+  ICD-10:
   - E00.%
   - E01.%
   - E02.%
   - E03.%
   - E89.0
-  icd9cm:
+  ICD-9:
   - 240.9
   - 243.%
   - 244.%
   - 246.1
   - 246.8
 - name: liver disease
-  icd10cm:
+  ICD-10:
   - B18.%
   - I85.%
   - I86.4
@@ -371,7 +378,7 @@ diagnosis:
   - K76.8
   - K76.9
   - Z94.4
-  icd9cm:
+  ICD-9:
   - 70.22
   - 70.23
   - 70.32
@@ -395,7 +402,7 @@ diagnosis:
   - 573.9
   - V42.7
 - name: lymphoma
-  icd10cm:
+  ICD-10:
   - C81.%
   - C82.%
   - C83.%
@@ -405,30 +412,30 @@ diagnosis:
   - C96.%
   - C90.0
   - C90.2
-  icd9cm:
+  ICD-9:
   - 200.%
   - 201.%
   - 202.%
   - 203.0
   - 238.6
 - name: metastatic cancer
-  icd10cm:
+  ICD-10:
   - C77.%
   - C78.%
   - C79.%
   - C80.%
-  icd9cm:
+  ICD-9:
   - 196.%
   - 197.%
   - 198.%
   - 199.%
 - name: obesity
-  icd10cm:
+  ICD-10:
   - E66.%
-  icd9cm:
+  ICD-9:
   - 278.0
 - name: other neurological disorders
-  icd10cm:
+  ICD-10:
   - G10.%
   - G11.%
   - G12.%
@@ -451,7 +458,7 @@ diagnosis:
   - G93.4
   - R47.0
   - R56.%
-  icd9cm:
+  ICD-9:
   - 331.9
   - 332.0
   - 332.1
@@ -469,7 +476,7 @@ diagnosis:
   - 780.3
   - 784.3
 - name: paralysis
-  icd10cm:
+  ICD-10:
   - G04.1
   - G11.4
   - G80.1
@@ -482,7 +489,7 @@ diagnosis:
   - G83.3
   - G83.4
   - G83.9
-  icd9cm:
+  ICD-9:
   - 334.1
   - 342.%
   - 343.%
@@ -495,7 +502,7 @@ diagnosis:
   - 344.6
   - 344.9
 - name: peptic ulcer disease excluding bleeding
-  icd10cm:
+  ICD-10:
   - K25.7
   - K25.9
   - K26.7
@@ -504,7 +511,7 @@ diagnosis:
   - K27.9
   - K28.7
   - K28.9
-  icd9cm:
+  ICD-9:
   - 531.7
   - 531.9
   - 532.7
@@ -514,7 +521,7 @@ diagnosis:
   - 534.7
   - 534.9
 - name: peripheral vascular disorders
-  icd10cm:
+  ICD-10:
   - I70.%
   - I71.%
   - I73.1
@@ -528,7 +535,7 @@ diagnosis:
   - K55.9
   - Z95.8
   - Z95.9
-  icd9cm:
+  ICD-9:
   - 93.0
   - 437.3
   - 440.%
@@ -547,7 +554,7 @@ diagnosis:
   - 557.9
   - V43.4
 - name: psychoses
-  icd10cm:
+  ICD-10:
   - F20.%
   - F22.%
   - F23.%
@@ -558,7 +565,7 @@ diagnosis:
   - F30.2
   - F31.2
   - F31.5
-  icd9cm:
+  ICD-9:
   - 293.8
   - 295.%
   - 296.04
@@ -568,13 +575,13 @@ diagnosis:
   - 297.%
   - 298.%
 - name: pulmonary circulation disorders
-  icd10cm:
+  ICD-10:
   - I26.%
   - I27.%
   - I28.0
   - I28.8
   - I28.9
-  icd9cm:
+  ICD-9:
   - 415.0
   - 415.1
   - 416.%
@@ -582,7 +589,7 @@ diagnosis:
   - 417.8
   - 417.9
 - name: renal failure
-  icd10cm:
+  ICD-10:
   - I12.0
   - I13.1
   - N18.%
@@ -593,7 +600,7 @@ diagnosis:
   - Z49.2
   - Z94.0
   - Z99.2
-  icd9cm:
+  ICD-9:
   - 403.01
   - 403.11
   - 403.91
@@ -610,7 +617,7 @@ diagnosis:
   - V45.1
   - V56.%
 - name: rheumatoid arthritis/collagen vascular diseases
-  icd10cm:
+  ICD-10:
   - L94.0
   - L94.1
   - L94.3
@@ -632,7 +639,7 @@ diagnosis:
   - M46.1
   - M46.8
   - M46.9
-  icd9cm:
+  ICD-9:
   - 446.%
   - 701.0
   - 710.0
@@ -650,8 +657,8 @@ diagnosis:
   - 728.5
   - 728.89
   - 729.3
-- name: solid tumour without metastasis
-  icd10cm:
+- name: solid tumor without metastasis
+  ICD-10:
   - C00.%
   - C01.%
   - C02.%
@@ -722,7 +729,7 @@ diagnosis:
   - C75.%
   - C76.%
   - C97.%
-  icd9cm:
+  ICD-9:
   - 140.%
   - 141.%
   - 142.%
@@ -779,7 +786,7 @@ diagnosis:
   - 194.%
   - 195.%
 - name: valvular disease
-  icd10cm:
+  ICD-10:
   - A52.0
   - I05.%
   - I06.%
@@ -800,7 +807,7 @@ diagnosis:
   - Z95.2
   - Z95.3
   - Z95.4
-  icd9cm:
+  ICD-9:
   - 93.2
   - 394.%
   - 395.%
@@ -814,7 +821,7 @@ diagnosis:
   - V42.2
   - V43.3
 - name: weight loss
-  icd10cm:
+  ICD-10:
   - E40.%
   - E41.%
   - E42.%
@@ -824,10 +831,23 @@ diagnosis:
   - E46.%
   - R63.4
   - R64
-  icd9cm:
+  ICD-9:
   - 260.%
   - 261.%
   - 262.%
   - 263.%
   - 783.2
   - 799.4
+Procedure:
+- name: heart surgery
+  ICD-9:
+  - 35.%
+  - 36.1%
+VitalSign:
+- name: oral temperature
+  EPIC:
+  - (T-O)
+  IBEX:
+  - (T-O)
+  TDS:
+  - (T-O)

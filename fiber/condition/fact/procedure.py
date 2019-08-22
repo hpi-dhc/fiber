@@ -1,3 +1,5 @@
+import pandas as pd
+
 from fiber.condition.fact.fact import FactCondition
 from fiber.database.table import (
     d_pers,
@@ -23,7 +25,7 @@ class Procedure(FactCondition):
     ]
 
 
-class VitalSign(Procedure):
+class Measurement(Procedure):
     dimensions = {'PROCEDURE', 'UNIT_OF_MEASURE'}
 
     _default_columns = [
@@ -37,12 +39,18 @@ class VitalSign(Procedure):
     ]
 
     def __init__(self, description: str = '', **kwargs):
-        kwargs['category'] = 'Vital Signs'
         if description:
             kwargs['description'] = description
         super().__init__(**kwargs)
         self.condition_operation = None
         self.condition_value = None
+
+    def _fetch_data(self, included_mrns=None, limit=None):
+        df = super()._fetch_data(included_mrns, limit=limit)
+        df['value'] = pd.to_numeric(
+            df.value, errors='coerce'
+        )
+        return df
 
     def create_clause(self):
         clause = super().create_clause()
@@ -101,3 +109,33 @@ class VitalSign(Procedure):
         self.condition_operation = '__ge__'
         self.condition_value = other
         return self
+
+    @property
+    def default_aggregations(self):
+        return {
+            'value': {
+                'mean': 'mean', 'min': 'min',
+                'max': 'max', 'count': 'count'
+            },
+            'time_of_day_key': 'min'
+        }
+
+
+class VitalSign(Measurement):
+    def __init__(self, description: str = '', **kwargs):
+        kwargs['category'] = 'Vital Signs'
+        if description:
+            kwargs['description'] = description
+        super().__init__(**kwargs)
+
+
+class Height(Measurement):
+    def __init__(self, **kwargs):
+        kwargs['description'] = 'HEIGHT'
+        super().__init__(**kwargs)
+
+
+class Weight(Measurement):
+    def __init__(self, **kwargs):
+        kwargs['description'] = 'WEIGHT'
+        super().__init__(**kwargs)
