@@ -29,7 +29,7 @@ class MRNs(BaseCondition):
             data = data[data.medical_record_number.isin(included_mrns)]
         return data[:limit]
 
-    def to_json(self):
+    def to_dict(self):
         return {
             'class': self.__class__.__name__,
             'attributes': {
@@ -37,7 +37,8 @@ class MRNs(BaseCondition):
             }
         }
 
-    def from_json(self, json):
+    @classmethod
+    def from_dict(cls, json):
         data = json['attributes']['data']
         df = pd.DataFrame(data, columns=COLUMNS)
-        return self.__class__(df)
+        return cls(df)

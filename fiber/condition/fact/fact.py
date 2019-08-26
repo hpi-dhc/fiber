@@ -1,9 +1,7 @@
-from sqlalchemy import (
-    orm,
-    sql,
-)
+from sqlalchemy import orm
 
-from fiber.condition import DatabaseCondition, BaseCondition
+from fiber.condition import DatabaseCondition
+from fiber.condition.mixins import AgeMixin
 from fiber.condition.database import _case_insensitive_like
 from fiber.database.table import (
     d_pers,
@@ -20,7 +18,7 @@ from fiber.database.table import (
 )
 
 
-class FactCondition(DatabaseCondition):
+class FactCondition(AgeMixin, DatabaseCondition):
 
     base_table = fact
     dimensions_map = {
@@ -48,11 +46,10 @@ class FactCondition(DatabaseCondition):
             raise Exception(
                 f"{self.__class__.__name__} code or context missing. Example:"
                 f"{self.__class__.__name__}('035.%','ICD-9')")
-        self.code = code
-        self.context = context
-        self.category = category
-        self.description = description
-        self.age_conditions = []
+        self._attrs['code'] = code
+        self._attrs['context'] = context
+        self._attrs['category'] = category
+        self._attrs['description'] = description
 
     @property
     def d_table(self):
@@ -80,44 +77,24 @@ class FactCondition(DatabaseCondition):
             self.code_column.name.lower(): 'count'
         }
 
-    def to_json(self):
-        if self.children:
-            return BaseCondition.to_json(self)
-        else:
-            return {
-                'class': self.__class__.__name__,
-                'attributes': {
-                    'context': self.context,
-                    'category': self.category,
-                    'code': self.code,
-                    'description': self.description,
-                },
-                'age_in_days': self.age_conditions,
-            }
-
-    def from_json(self, json):
-        condition = super().from_json(json)
-        for a in json['age_in_days']:
-            condition.age_in_days(a['min_days'], a['max_days'])
-        return condition
-
     def create_clause(self):
-        clause = sql.true()
-        if self.context:
-            clause &= self.d_table.CONTEXT_NAME.like(self.context)
-        if self.category:
+        clause = super().create_clause()
+
+        if self._attrs['context']:
+            clause &= self.d_table.CONTEXT_NAME.like(
+                self._attrs['context'])
+
+        if self._attrs['category']:
             clause &= _case_insensitive_like(
-                self.category_column, self.category)
-        if self.code:
-            clause &= self.code_column.like(self.code)
-        if self.description:
+                self.category_column, self._attrs['category'])
+
+        if self._attrs['code']:
+            clause &= self.code_column.like(self._attrs['code'])
+
+        if self._attrs['description']:
             clause &= _case_insensitive_like(
-                self.description_column, self.description)
-        for a in self.age_conditions:
-            if a['min_days']:
-                clause &= fact.AGE_IN_DAYS >= a['min_days']
-            if a['max_days']:
-                clause &= fact.AGE_IN_DAYS < a['max_days']
+                self.description_column, self._attrs['description'])
+
         return clause
 
     def create_query(self):
@@ -151,14 +128,3 @@ class FactCondition(DatabaseCondition):
                     getattr(table, key) == getattr(join_table, join_key)
                 )
         return q
-
-    def age(self, min_age=None, max_age=None):
-        self.age_conditions.append(
-            {'min_days': 365 * min_age if min_age else None,
-             'max_days': 365 * max_age if max_age else None})
-        return self
-
-    def age_in_days(self, min_days=None, max_days=None):
-        self.age_conditions.append({'min_days': min_days,
-                                    'max_days': max_days})
-        return self

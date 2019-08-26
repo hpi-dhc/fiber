@@ -1,5 +1,6 @@
 from typing import Set
 
+import pandas as pd
 from sqlalchemy import (
     func,
     orm,
@@ -17,8 +18,6 @@ from fiber.database.table import Table
 
 
 def _case_insensitive_like(column, value):
-    # return column.like(value)
-    # Actual case insensitivity somewhat memory intensive at the moment.
     return func.upper(column).like(value.upper())
 
 
@@ -121,10 +120,10 @@ class DatabaseCondition(BaseCondition):
 
     def create_clause(self):
         """
-        Must be implemented by subclasses to create a SQLAlchemy clause based
+        Should be overwritten by subclasses to create a SQLAlchemy clause based
         on the defined condition. It is used to select the correct patients.
         """
-        raise NotImplementedError
+        return sql.true()
 
     def create_query(self) -> orm.Query:
         """
@@ -147,6 +146,8 @@ class DatabaseCondition(BaseCondition):
             q = q.limit(limit)
 
         mrn_df = read_with_progress(q.statement, self.engine)
+        if mrn_df.empty:
+            mrn_df = pd.DataFrame(columns=['medical_record_number'])
         assert len(mrn_df.columns) == 1, "create_query should return only MRNs"
         result = set(
             mrn for mrn in
@@ -168,7 +169,7 @@ class DatabaseCondition(BaseCondition):
         q = q.with_entities(*self.data_columns).distinct()
 
         result = read_with_progress(
-            q.statement, self.engine, silent=True)
+            q.statement, self.engine, silent=bool(included_mrns))
         return result
 
     def example_values(self):
