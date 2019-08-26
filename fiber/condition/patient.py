@@ -1,4 +1,4 @@
-from sqlalchemy import orm, extract, sql
+from sqlalchemy import orm, extract
 
 from fiber.database.table import d_pers, fact
 from fiber.condition import DatabaseCondition, BaseCondition
@@ -43,36 +43,25 @@ class Patient(DatabaseCondition):
         be used to more precisly select patients.
         """
         super().__init__(**kwargs)
-        self.gender = gender
-        self.religion = religion
-        self.race = race
+        self._attrs['gender'] = gender
+        self._attrs['religion'] = religion
+        self._attrs['race'] = race
 
     def create_clause(self):
-        clause = sql.true()
-        if self.gender:
-            clause &= _case_insensitive_like(d_pers.GENDER, self.gender)
-        if self.religion:
-            clause &= _case_insensitive_like(d_pers.RELIGION, self.religion)
-        if self.race:
-            clause &= _case_insensitive_like(d_pers.RACE, self.race)
+        clause = super().create_clause()
+        if self._attrs['gender']:
+            clause &= _case_insensitive_like(
+                d_pers.GENDER, self._attrs['gender'])
+        if self._attrs['religion']:
+            clause &= _case_insensitive_like(
+                d_pers.RELIGION, self._attrs['religion'])
+        if self._attrs['race']:
+            clause &= _case_insensitive_like(
+                d_pers.RACE, self._attrs['race'])
 
         # cast(extract('year', dp.DATE_OF_BIRTH),sqlalchemy.Integer) != 1066
         # currentYear = datetime.datetime.now().year
         return clause
-
-    def to_json(self):
-        # if self.children: <-> condition is connected with AND/OR
-        if self.children:
-            return BaseCondition.to_json(self)
-        else:
-            return {
-                'class': self.__class__.__name__,
-                'attributes': {
-                    'gender': self.gender,
-                    'religion': self.religion,
-                    'race': self.race,
-                },
-            }
 
     def create_query(self):
         return orm.Query(self.base_table).filter(

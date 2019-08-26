@@ -1,5 +1,3 @@
-from sqlalchemy import sql
-
 from fiber.condition.database import _case_insensitive_like
 from fiber.condition.fact.fact import FactCondition
 from fiber.database.table import (
@@ -28,8 +26,8 @@ class Encounter(FactCondition):
         super().__init__(**kwargs)
 
     def create_clause(self):
-        clause = sql.true()
-        if self.category:
+        clause = super().create_clause()
+        if self._attrs['category']:
             clause &= _case_insensitive_like(
-                d_enc.ENCOUNTER_TYPE, self.category)
+                d_enc.ENCOUNTER_TYPE, self._attrs['category'])
         return clause

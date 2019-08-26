@@ -1,5 +1,3 @@
-from sqlalchemy import sql
-
 from fiber.condition.database import _case_insensitive_like
 from fiber.condition.fact.fact import FactCondition
 from fiber.database.table import (
@@ -27,13 +25,17 @@ class MetaData(FactCondition):
         super().__init__(**kwargs)
 
     def create_clause(self):
-        clause = sql.true()
-        if self.description:
+        clause = super().create_clause()
+        if self._attrs['description']:
             clause &= (
-                _case_insensitive_like(d_meta.LEVEL1, self.description) |
-                _case_insensitive_like(d_meta.LEVEL2, self.description) |
-                _case_insensitive_like(d_meta.LEVEL3, self.description) |
-                _case_insensitive_like(d_meta.LEVEL4, self.description)
+                _case_insensitive_like(
+                    d_meta.LEVEL1, self._attrs['description']) |
+                _case_insensitive_like(
+                    d_meta.LEVEL2, self._attrs['description']) |
+                _case_insensitive_like(
+                    d_meta.LEVEL3, self._attrs['description']) |
+                _case_insensitive_like(
+                    d_meta.LEVEL4, self._attrs['description'])
             )
         return clause
 
@@ -69,20 +71,14 @@ class TobaccoUse(MetaData):
 
     def __init__(self, map_values: bool = True, **kwargs):
         kwargs['description'] = 'Tobacco Use'
-        self.map_values = map_values
+        self._attrs['map_values'] = map_values
         super().__init__(**kwargs)
 
     def _fetch_data(self, included_mrns=None, limit=None):
         df = super()._fetch_data(included_mrns, limit=limit)
-        if self.map_values:
+        if self._attrs['map_values']:
             df['value'] = df.value.map(self.MAPPING)
         return df
-
-    def to_json(self):
-        json = super().to_json()
-        if not self.children:
-            json['attributes']['map_values'] = self.map_values
-        return json
 
 
 class DrugUse(MetaData):

@@ -30,6 +30,7 @@ class BaseCondition:
         mrns: Set[str] = None,
         children=None,
         operator=None,
+        **kwargs,
     ):
         """
         :param Set mrns: Set of MRN-Strings for which the condition is true.
@@ -42,6 +43,7 @@ class BaseCondition:
         self._mrns = mrns or set()
         self.children = children
         self.operator = operator
+        self._attrs = {}
 
     @cached(cache=mrn_cache, key=_hash_request)
     def get_mrns(self, limit=None):
@@ -83,44 +85,53 @@ class BaseCondition:
         Therefore the hash is based of the json representation of the condition
         as this would result in the same conditions and database query.
         """
-        return hash(json.dumps(self.to_json()))
+        return hash(json.dumps(self.to_dict()))
 
-    def to_json(self):
+    def to_dict(self):
         """
-        Must be implemented by subclasses to return a json representation of
+        Must be implemented by subclasses to return a dict representation of
         the condition.
 
         Example:
 
-        >>> Patient(gender='Male').to_json()
+        >>> Patient(gender='Male').to_dict()
         {class:'Patient', attributes:{gender:'Male', religion:None, race:None}
 
-        In the BaseCondition the json of subclasses is combined with the
+        In the BaseCondition the dict of subclasses is combined with the
         operators connecting them.
 
-        >>> (Patient(...) & Patient(...)).to_json()
+        >>> (Patient(...) & Patient(...)).to_dict()
         {'and':[{class:'Patient',...}, {class:'Patient',...}]}
 
-        The ``.to_json()`` function is used for caching previous results and
-        should return the same json if the condtion execution returns the same
+        The ``.to_dict()`` function is used for caching previous results and
+        should return the same dict if the condtion execution returns the same
         results.
         """
-        return {
-            self.operator: [c.to_json() for c in self.children]
-        }
+        if self.children:
+            return {
+                self.operator: [c.to_dict() for c in self.children]
+            }
+        else:
+            return {
+                'class': self.__class__.__name__,
+                'attributes': {
+                    k: v for (k, v) in self._attrs.items() if v
+                },
+            }
 
-    def from_json(self, json):
+    @classmethod
+    def from_dict(cls, json):
         """
         Loads a single condition based on the json by instantiating them with
         the `attributes` defined in the json.
 
         If other data apart from the class attributes are used the subclass
-        needs to implement `.from_json()` to restore the condition accordingly.
+        needs to implement `.from_dict()` to restore the condition accordingly.
 
         This is used to restore the full condition from a json in
-        ``fiber.utils.storage.json_to_condition()``
+        ``fiber.utils.storage.dict_to_condition()``
         """
-        return self.__class__(**json['attributes'])
+        return cls(**json['attributes'])
 
     def __or__(self, other):
         """

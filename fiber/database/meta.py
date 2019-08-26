@@ -1,5 +1,5 @@
 # flake8: noqa
-from sqlalchemy import Table, Column, Integer, String, DateTime, MetaData
+from sqlalchemy import Table, Column, Integer, Float, String, DateTime, MetaData
 
 def add_tables(meta):
 
@@ -53,6 +53,7 @@ def add_tables(meta):
         Column('DATA_STATE_KEY', Integer, default=0),
         Column('VALUE', String, default=''),
         Column('AGE_IN_DAYS', Integer, default=0),
+        Column('NUMERIC_VALUE', Float, default=0),
     )
 
     FD_MATERIAL = Table(
@@ -189,6 +190,7 @@ def add_tables(meta):
         Column('REFERENCE_RANGE', String, default=''),
         Column('UNIT_OF_MEASUREMENT', String, default=''),
         Column('TEST_RESULT_VALUE', String, default=''),
+        Column('NUMERIC_VALUE', Float, default=0),
     )
 
     D_METADATA = Table(

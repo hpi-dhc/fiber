@@ -67,9 +67,11 @@ def read_with_progress(query_or_statement, engine, silent=False):
         chunks = pd.read_sql_query(
             query_or_statement, con=engine, chunksize=READ_CHUNK_SIZE)
     with Timer('Fetching'):
-        result = pd.concat([
-            x for x
-            in tqdm(chunks)
-        ])
-
+        try:
+            result = pd.concat([
+                x for x
+                in tqdm(chunks)
+            ])
+        except ValueError:
+            result = pd.DataFrame()
     return result

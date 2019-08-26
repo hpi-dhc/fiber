@@ -28,7 +28,11 @@ class Drug(Material):
     def __init__(self, name: str = '', *args, **kwargs):
         kwargs['category'] = 'Drug'
         super().__init__(*args, **kwargs)
-        self.name = name
+        self._attrs['name'] = name
+
+    @property
+    def name(self):
+        return self._attrs['name']
 
     def create_clause(self):
         clause = super().create_clause()
@@ -40,10 +44,3 @@ class Drug(Material):
                 _case_insensitive_like(fd_mat.BRAND2, self.name)
             )
         return clause
-
-    def to_json(self):
-        json = super().to_json()
-        # Condition is connected with AND/OR
-        if not self.children:
-            json['attributes']['name'] = self.name
-        return json
