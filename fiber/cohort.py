@@ -1,13 +1,15 @@
 import math
 from collections import defaultdict
 from functools import reduce
-from typing import Set, List, Union
+from typing import Set, List, Union, Optional
+
+import pandas as pd
 
 from fiber.condition.base import BaseCondition
 from fiber.condition import (
     DatabaseCondition,
     MRNs,
-    Patient
+    Patient,
 )
 from fiber.database.table import d_pers
 from fiber.plots.distributions import (
@@ -24,26 +26,62 @@ from fiber.utils.pivot import pivot_df_with_windows
 
 
 class Cohort:
+    """ Patients that share common conditions make up a cohort.
 
-    def __init__(self, condition: BaseCondition, limit=None):
+    A Cohort can be used to fetch, pivot and postprocess data pertaining to
+    all of its members.
+
+    Args:
+        condition: The condition that defines Cohort belonging.
+        limit: The maximum number of Patients that the Cohort should hold.
+    """
+
+    def __init__(self, condition: BaseCondition, limit: Optional[int] = None):
         self._condition = condition
         self._excluded_mrns = set()
         self._mrn_limit = limit
 
-    def mrns(self):
+    def mrns(self) -> Set[str]:
+        """Get the MRN of each individual Cohort member."""
         return (self._condition.get_mrns(limit=self._mrn_limit)
                 - self._excluded_mrns)
 
-    def exclude(self, mrns: Union[Set[str], Set[int], List[str], List[int]]):
+    def exclude(self, mrns: Union[Set[str], List[str]]):
+        """ Exclude specific MRNs from being part of the Cohort.
+
+        Args:
+            mrns: A collection of MRNs that will be excluded from the Cohort.
+        """
         if isinstance(mrns, set):
             mrns = list(mrns)
         mrns = set(map(str, mrns))
         self._excluded_mrns = self._excluded_mrns | set(mrns)
         return self
 
-    def get(self, *data_conditions, limit=None):
-        data = []
+    def get(
+            self,
+            data_condition: BaseCondition,
+            *args: BaseCondition,
+            limit: Optional[int] = None,
+    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+        """Fetch data for all members of the Cohort.
 
+        Args:
+            data_condition: A condition that describes data points.
+            *args: Further data_conditions.
+            limit: Limit for the number of returned data points.
+
+        Examples:
+            >>> cohort.get(LabValue())
+            pd.DataFrame(...)
+
+            >>> cohort.get(LabValue(), Drug(), limit=100)
+            [pd.DataFrame(...), pd.DataFrame(...)]
+
+        """
+        data_conditions = [data_condition] + list(args)
+
+        data = []
         # Group Data by BaseTable (:/ only works for DatabaseConditions)
         database_cond = defaultdict(list)
         for cond in data_conditions:
