@@ -7,8 +7,8 @@ class AgeMixin(ABC):
         super().__init__(*args, **kwargs)
         self._attrs['age_conditions'] = []
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
 
         for a in self._attrs['age_conditions']:
             if a['min_days']:
@@ -35,6 +35,6 @@ class AgeMixin(ABC):
     @classmethod
     def from_dict(cls, json):
         c = super().from_dict(json)
-        for a in json['attributes']['age_conditions']:
+        for a in json['attributes'].get('age_conditions', []):
             c.age_in_days(a['min_days'], a['max_days'])
         return c

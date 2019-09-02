@@ -1,4 +1,4 @@
-from fiber.condition.database import _case_insensitive_like
+from fiber.condition.database import _multi_like_clause
 from fiber.condition.fact.fact import FactCondition
 from fiber.database.table import (
     d_pers,
@@ -25,22 +25,40 @@ class Material(FactCondition):
 
 class Drug(Material):
 
-    def __init__(self, name: str = '', *args, **kwargs):
+    def __init__(
+        self,
+        name: str = '',
+        brand: str = '',
+        generic: str = '',
+        *args,
+        **kwargs
+    ):
         kwargs['category'] = 'Drug'
         super().__init__(*args, **kwargs)
         self._attrs['name'] = name
+        self._attrs['brand'] = brand
+        self._attrs['generic'] = generic
 
     @property
     def name(self):
         return self._attrs['name']
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
         if self.name:
             clause &= (
-                _case_insensitive_like(fd_mat.MATERIAL_NAME, self.name) |
-                _case_insensitive_like(fd_mat.GENERIC_NAME, self.name) |
-                _case_insensitive_like(fd_mat.BRAND1, self.name) |
-                _case_insensitive_like(fd_mat.BRAND2, self.name)
+                _multi_like_clause(fd_mat.MATERIAL_NAME, self.name) |
+                _multi_like_clause(fd_mat.GENERIC_NAME, self.name) |
+                _multi_like_clause(fd_mat.BRAND1, self.name) |
+                _multi_like_clause(fd_mat.BRAND2, self.name)
             )
+        if self._attrs['brand']:
+            clause &= (
+                _multi_like_clause(fd_mat.BRAND1, self._attrs['brand']) |
+                _multi_like_clause(fd_mat.BRAND2, self._attrs['brand'])
+            )
+        if self._attrs['generic']:
+            clause &= _multi_like_clause(
+                fd_mat.GENERIC_NAME, self._attrs['generic'])
+
         return clause

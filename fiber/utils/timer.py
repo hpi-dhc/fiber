@@ -1,5 +1,7 @@
 import time
 
+import fiber
+
 
 class Timer:
 
@@ -17,7 +19,7 @@ class Timer:
 
     def __exit__(self, *args):
         self.end = time.time()
-        if self.name:
+        if self.name and fiber.VERBOSE:
             print(f'{self.name} time: {self.elapsed:.2f}s')
 
     def __repr__(self):

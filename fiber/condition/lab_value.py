@@ -52,8 +52,8 @@ class LabValue(AgeMixin, ComparisonMixin, DatabaseCondition):
         self._attrs['name'] = name
         self._attrs['abnormal'] = abnormal
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
         if self._attrs['name']:
             clause &= _case_insensitive_like(
                 epic_lab.TEST_NAME, self._attrs['name'])
@@ -65,7 +65,7 @@ class LabValue(AgeMixin, ComparisonMixin, DatabaseCondition):
 
         return clause
 
-    def create_query(self):
+    def _create_query(self):
         return orm.Query(self.base_table).filter(
             self.clause
         ).with_entities(

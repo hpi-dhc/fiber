@@ -24,8 +24,8 @@ class MetaData(FactCondition):
             kwargs['description'] = description
         super().__init__(**kwargs)
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
         if self._attrs['description']:
             clause &= (
                 _case_insensitive_like(

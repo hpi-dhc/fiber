@@ -63,7 +63,7 @@ def read_with_progress(query_or_statement, engine, silent=False):
     if fiber.VERBOSE and not silent:
         print(sqlparse.format(query_or_statement, reindent=True))
 
-    with Timer('Execution'):
+    with Timer('Server Execution'):
         chunks = pd.read_sql_query(
             query_or_statement, con=engine, chunksize=READ_CHUNK_SIZE)
     with Timer('Fetching'):
