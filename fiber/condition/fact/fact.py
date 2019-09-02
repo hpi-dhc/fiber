@@ -1,8 +1,16 @@
+from typing import (
+    Iterable,
+    Union,
+)
+
 from sqlalchemy import orm
 
 from fiber.condition import DatabaseCondition
 from fiber.condition.mixins import AgeMixin
-from fiber.condition.database import _case_insensitive_like
+from fiber.condition.database import (
+    _case_insensitive_like,
+    _multi_like_clause,
+)
 from fiber.database.table import (
     d_pers,
     fact,
@@ -33,7 +41,7 @@ class FactCondition(AgeMixin, DatabaseCondition):
 
     def __init__(
         self,
-        code: str = '',
+        code: Union[str, Iterable[str]] = '',
         context: str = '',
         category: str = '',
         description: str = '',
@@ -77,8 +85,8 @@ class FactCondition(AgeMixin, DatabaseCondition):
             self.code_column.name.lower(): 'count'
         }
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
 
         if self._attrs['context']:
             clause &= self.d_table.CONTEXT_NAME.like(
@@ -89,7 +97,7 @@ class FactCondition(AgeMixin, DatabaseCondition):
                 self.category_column, self._attrs['category'])
 
         if self._attrs['code']:
-            clause &= self.code_column.like(self._attrs['code'])
+            clause &= _multi_like_clause(self.code_column, self._attrs['code'])
 
         if self._attrs['description']:
             clause &= _case_insensitive_like(
@@ -97,7 +105,7 @@ class FactCondition(AgeMixin, DatabaseCondition):
 
         return clause
 
-    def create_query(self):
+    def _create_query(self):
         q = orm.Query(self.base_table).join(
             d_pers,
             self.base_table.person_key == d_pers.person_key

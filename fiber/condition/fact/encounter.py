@@ -29,8 +29,8 @@ class Encounter(FactCondition):
             kwargs['category'] = category
         super().__init__(**kwargs)
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
         if self._attrs['category']:
             clause &= _case_insensitive_like(
                 d_enc.ENCOUNTER_TYPE, self._attrs['category'])

@@ -47,8 +47,8 @@ class Patient(DatabaseCondition):
         self._attrs['religion'] = religion
         self._attrs['race'] = race
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def _create_clause(self):
+        clause = super()._create_clause()
         if self._attrs['gender']:
             clause &= _case_insensitive_like(
                 d_pers.GENDER, self._attrs['gender'])
@@ -63,7 +63,7 @@ class Patient(DatabaseCondition):
         # currentYear = datetime.datetime.now().year
         return clause
 
-    def create_query(self):
+    def _create_query(self):
         return orm.Query(self.base_table).filter(
             self.clause
         ).filter(

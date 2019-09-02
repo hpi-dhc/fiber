@@ -1,3 +1,5 @@
+from functools import reduce
+from itertools import chain
 from typing import Set
 
 import pandas as pd
@@ -5,6 +7,7 @@ from sqlalchemy import (
     func,
     orm,
     sql,
+    or_,
 )
 
 import fiber
@@ -21,6 +24,19 @@ def _case_insensitive_like(column, value):
     return func.upper(column).like(value.upper())
 
 
+def _multi_like_clause(column, value_or_values):
+    values = (
+        [value_or_values]
+        if isinstance(value_or_values, str)
+        else value_or_values
+    )
+
+    return reduce(
+        or_,
+        [_case_insensitive_like(column, value) for value in values]
+    )
+
+
 class DatabaseCondition(BaseCondition):
     """
     The DatabaseCondition adds functionality to the BaseCondition which
@@ -32,6 +48,9 @@ class DatabaseCondition(BaseCondition):
     conditions of different DBs are only combined as BaseConditions in
     ``__and__``, ``__or__``.
     """
+
+    engine = get_engine()
+
     def __init__(
         self,
         mrns: Set[str] = None,
@@ -65,7 +84,6 @@ class DatabaseCondition(BaseCondition):
         self._clause = sql.true() if clause is None else clause
         self._specified_columns = data_columns or []
         self._data_cache = {}
-        self.engine = get_engine()
 
     @property
     def base_table(self) -> Table:
@@ -82,7 +100,7 @@ class DatabaseCondition(BaseCondition):
         Must be set by subclasses.
 
         This should return an array of columns which are in the result table of
-        ``.create_query()``. These columns will be returned by default when
+        ``._create_query()``. These columns will be returned by default when
         ``.get_data()`` is called.
         """
         raise NotImplementedError
@@ -93,7 +111,7 @@ class DatabaseCondition(BaseCondition):
         Must be set by subclasses.
 
         This is used to specify the column in the result table of
-        ``.create_query()`` which is holding the MRNs.
+        ``._create_query()`` which is holding the MRNs.
         """
         raise NotImplementedError
 
@@ -101,31 +119,34 @@ class DatabaseCondition(BaseCondition):
     def data_columns(self):
         """
         Returns columns which are in the result table of
-        ``.create_query()``. These columns will be returned when
+        ``._create_query()``. These columns will be returned when
         ``.get_data()`` is called.
         """
-        return self._specified_columns or self._default_columns
+        return [
+            str(col) for col
+            in (self._specified_columns or self._default_columns)
+        ]
 
     @property
     def clause(self):
         """
         Returns the clause of the current condition or runs
-        ``.create_clause()`` to create it.
+        ``._create_clause()`` to create it.
         """
         # TODO recursively create clause of combinable conditions
         if not isinstance(self._clause, sql.elements.True_):
             return self._clause
         else:
-            return self.create_clause()
+            return self._create_clause()
 
-    def create_clause(self):
+    def _create_clause(self):
         """
         Should be overwritten by subclasses to create a SQLAlchemy clause based
         on the defined condition. It is used to select the correct patients.
         """
         return sql.true()
 
-    def create_query(self) -> orm.Query:
+    def _create_query(self) -> orm.Query:
         """
         Must be implemented by subclasses to return an instance of a SQLAlchemy
         query which only returns MRNs.
@@ -140,15 +161,15 @@ class DatabaseCondition(BaseCondition):
         raise NotImplementedError
 
     def _fetch_mrns(self, limit=None):
-        """Fetches MRNs from the results of ``.create_query()``."""
-        q = self.create_query()
+        """Fetches MRNs from the results of ``._create_query()``."""
+        q = self._create_query()
         if limit:
             q = q.limit(limit)
 
         mrn_df = read_with_progress(q.statement, self.engine)
         if mrn_df.empty:
             mrn_df = pd.DataFrame(columns=['medical_record_number'])
-        assert len(mrn_df.columns) == 1, "create_query should return only MRNs"
+        assert len(mrn_df.columns) == 1, '_create_query must return only MRNs'
         result = set(
             mrn for mrn in
             mrn_df.iloc[:, 0]
@@ -159,9 +180,9 @@ class DatabaseCondition(BaseCondition):
         """
         Fetches the data defined with ``.data_columns`` for each patient
         defined by this condition and via ``included_mrns`` from the results of
-        ``.create_query()``.
+        ``._create_query()``.
         """
-        q = self.create_query()
+        q = self._create_query()
         if included_mrns:
             q = q.filter(self.mrn_column.in_(included_mrns))
         if limit:
@@ -201,7 +222,7 @@ class DatabaseCondition(BaseCondition):
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
 
-        q = self.create_query()
+        q = self._create_query()
         q = q.group_by(
             *columns
         ).with_entities(
@@ -217,10 +238,24 @@ class DatabaseCondition(BaseCondition):
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
 
-        q = self.create_query()
+        q = self._create_query()
         q = q.with_entities(*columns).distinct()
 
         return read_with_progress(q.statement, self.engine)
+
+    def to_dict(self):
+        obj_dict = super().to_dict()
+        if self._specified_columns:
+            obj_dict['_specified_columns'] = self._specified_columns
+
+        return obj_dict
+
+    @classmethod
+    def from_dict(cls, obj_dict):
+        obj = super().from_dict(obj_dict)
+        if '_specified_columns' in obj_dict:
+            obj._specified_columns = obj_dict['_specified_columns']
+        return obj
 
     def __or__(self, other):
         """
@@ -232,10 +267,9 @@ class DatabaseCondition(BaseCondition):
             self.base_table == other.base_table
             and not (self._mrns or other._mrns)
         ):
-            unique_columns = []
-            for col in (self.data_columns+other.data_columns):
-                if col not in unique_columns:
-                    unique_columns.append(col)
+            unique_columns = list(dict.fromkeys(
+                chain(self.data_columns, other.data_columns)
+            ))
 
             return self.__class__(
                 dimensions=self.dimensions | other.dimensions,

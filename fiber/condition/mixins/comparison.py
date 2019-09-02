@@ -3,8 +3,15 @@ from abc import ABC
 
 class ComparisonMixin(ABC):
 
-    def create_clause(self):
-        clause = super().create_clause()
+    def __init__(self, *args, discard_nans=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._attrs['discard_nans'] = discard_nans
+
+    def _create_clause(self):
+        clause = super()._create_clause()
+
+        if self._attrs['discard_nans']:
+            clause &= (self.base_table.NUMERIC_VALUE.isnot(None))
 
         # Not the reason for the speedup; just there to prevent issues
         # for tests without a single numeric value.
@@ -21,8 +28,9 @@ class ComparisonMixin(ABC):
     @classmethod
     def from_dict(cls, json):
         obj = super().from_dict(json)
-        obj._attrs['comp_operator'] = json['attributes']['comp_operator']
-        obj._attrs['comp_value'] = json['attributes']['comp_value']
+        if 'comp_operator' in json['attributes']:
+            obj._attrs['comp_operator'] = json['attributes']['comp_operator']
+            obj._attrs['comp_value'] = json['attributes']['comp_value']
         return obj
 
     # Defining __eq__ requires explicit definition of __hash__
