@@ -1,13 +1,15 @@
 import math
 from collections import defaultdict
 from functools import reduce
-from typing import Set, List, Union, Optional
+from typing import Set, List, Union, Tuple, Optional
 
 import pandas as pd
 
+from fiber import OCCURRENCE_INDEX
 from fiber.condition.base import BaseCondition
 from fiber.condition import (
     DatabaseCondition,
+    LabValue,
     MRNs,
     Patient,
 )
@@ -16,13 +18,16 @@ from fiber.plots.distributions import (
     bars,
     hist,
 )
-
-from fiber.utils.merge import (
+from fiber.utils import Timer
+from fiber.dataframe import (
+    time_window_clip,
+    create_id_column,
+    column_threshold_clip,
     merge_event_dfs,
     merge_to_base,
+    aggregate_df_with_windows
 )
-
-from fiber.utils.pivot import pivot_df_with_windows
+from fiber.extensions import DEFAULT_PIVOT_CONFIG
 
 
 class Cohort:
@@ -57,6 +62,67 @@ class Cohort:
         mrns = set(map(str, mrns))
         self._excluded_mrns = self._excluded_mrns | set(mrns)
         return self
+
+    def _pivot_all_for(
+        self,
+        condition,
+        pivot_table_kwargs: dict,
+        threshold: float = 0.5,
+        window: Tuple[float] = (-math.inf, math.inf),
+        flatten_columns: bool = True
+    ):
+
+        df = self.values_for(condition)
+
+        with Timer('Time clipping'):
+            df = time_window_clip(df=df, window=window)
+
+        with Timer('Setting indices'):
+            df.set_index(OCCURRENCE_INDEX, inplace=True)
+
+        with Timer('Creating id columns'):
+            if not isinstance(condition, LabValue):
+                create_id_column(condition, df)
+            else:
+                df['test_name'].cat.categories = [
+                    f'{LabValue.__name__}__{g}'
+                    for g in df['test_name'].cat.categories
+                ]
+
+        with Timer('Pivoting'):
+            df = pd.pivot_table(
+                data=df,
+                index=OCCURRENCE_INDEX,
+                values=pivot_table_kwargs['aggfunc'].keys(),
+                **pivot_table_kwargs
+            )
+
+        with Timer('Column threshold clipping'):
+            df = column_threshold_clip(
+                df=df,
+                threshold=threshold
+            )
+
+        if flatten_columns:
+            with Timer('Flatten column index'):
+                df.columns = [
+                    '__'.join(col[1:]).strip()
+                    for col in df.columns.values
+                ]
+
+        return df
+
+    def get_pivoted_features(
+        self,
+        pivot_config=DEFAULT_PIVOT_CONFIG,
+    ):
+        results = [
+            self._pivot_all_for(cond, **kwargs)
+            for (cond, kwargs) in pivot_config.items()
+        ]
+
+        with Timer('Merge'):
+            return self.merge_patient_data(*results)
 
     def get(
             self,
@@ -105,21 +171,22 @@ class Cohort:
         # (TODO) Check if selection of distinct timestamp can be moved to db
         # for DatabaseConditions
         occurrences = self.get(condition)
-
-        return occurrences[
-            ['medical_record_number', 'age_in_days']
-        ].drop_duplicates()
+        return occurrences[OCCURRENCE_INDEX].drop_duplicates()
 
     def _validate_and_get_event_df(
         self,
         relative_to=None, before=None, after=None,
     ):
-        if not bool(relative_to) ^ bool(before) ^ bool(after):
-            raise ValueError(
-                'Only one of (relative_to, before, after) can be used.'
-            )
-        else:
+        arg_count = sum([bool(relative_to), bool(before), bool(after)])
+        if arg_count == 0:
+            return self.get_occurrences(self._condition)
+        elif arg_count == 1:
             return self.get_occurrences(relative_to or before or after)
+        else:
+            raise ValueError(
+                'Only one of (relative_to, before, after) '
+                'can be used at the same time.'
+            )
 
     def occurs(
         self,
@@ -166,7 +233,7 @@ class Cohort:
         aggregation_functions,
         name: str = 'interval',
     ):
-        results = pivot_df_with_windows(
+        results = aggregate_df_with_windows(
             time_windows,
             df,
             aggregation_functions=aggregation_functions,
@@ -184,7 +251,7 @@ class Cohort:
         name: str = 'interval',
     ):
 
-        results = pivot_df_with_windows(
+        results = aggregate_df_with_windows(
             time_windows,
             df,
             aggregation_functions={'time_delta_in_days': 'any'},
@@ -202,9 +269,7 @@ class Cohort:
         condition,
         time_windows=None,
     ):
-        co_occurrence = self.occurs(
-            condition, relative_to=self._condition
-        )
+        co_occurrence = self.occurs(condition)
 
         time_windows = time_windows or ((0, 1), (0, 7), (0, 14), (0, 28))
         return self.has_occurrence_in(
@@ -219,9 +284,7 @@ class Cohort:
         condition,
         time_windows=None,
     ):
-        co_occurrence = self.occurs(
-            condition, relative_to=self._condition
-        )
+        co_occurrence = self.occurs(condition)
 
         time_windows = time_windows or ((-math.inf, 0), )
         return self.has_occurrence_in(

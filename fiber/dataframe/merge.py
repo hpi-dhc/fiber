@@ -1,6 +1,8 @@
 import pandas as pd
 from functools import reduce
 
+from fiber import OCCURRENCE_INDEX
+
 
 def merge_event_dfs(
     event_df,
@@ -29,7 +31,7 @@ def merge_to_base(base, dataframes):
         lambda left, right: pd.merge(
             left,
             right,
-            on=['medical_record_number', 'age_in_days'],
+            on=OCCURRENCE_INDEX,
             how='left'
         ),
         [base] + list(checked_frames)

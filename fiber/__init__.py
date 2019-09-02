@@ -18,3 +18,4 @@ VERBOSE = (
     or False
 )
 MSDW_DB = os.environ.get('FIBER_MSDW_DB') or 'hana'
+OCCURRENCE_INDEX = ['medical_record_number', 'age_in_days']
