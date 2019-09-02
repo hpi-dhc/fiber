@@ -74,7 +74,7 @@ class LabValue(AgeMixin, ComparisonMixin, DatabaseCondition):
 
     def _fetch_data(self, included_mrns=None, limit=None):
         """
-        LabValue overwirtes ``._fetch_data()`` to simplify the result data.
+        LabValue overwrites ``._fetch_data()`` to simplify the result data.
         """
         df = super()._fetch_data(included_mrns, limit=limit)
 

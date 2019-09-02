@@ -10,6 +10,10 @@ from fiber.database.table import (
 class Encounter(FactCondition):
 
     dimensions = {'ENCOUNTER'}
+    d_table = d_enc
+    code_column = d_enc.ENCOUNTER_TYPE
+    category_column = d_enc.ENCOUNTER_TYPE
+    description_column = d_enc.ENCOUNTER_TYPE
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,

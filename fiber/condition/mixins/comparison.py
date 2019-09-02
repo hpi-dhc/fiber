@@ -6,6 +6,10 @@ class ComparisonMixin(ABC):
     def create_clause(self):
         clause = super().create_clause()
 
+        # Not the reason for the speedup; just there to prevent issues
+        # for tests without a single numeric value.
+        clause &= (self.base_table.NUMERIC_VALUE.isnot(None))
+
         if 'comp_operator' in self._attrs:
             clause &= getattr(
                 self.base_table.NUMERIC_VALUE,
