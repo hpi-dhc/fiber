@@ -82,7 +82,7 @@ class DatabaseCondition(BaseCondition):
         self.dimensions = dimensions or set()
         # sql.true() acts as an 'empty' initializer for the clause
         self._clause = sql.true() if clause is None else clause
-        self._specified_columns = data_columns or []
+        self.data_columns = data_columns or []
         self._data_cache = {}
 
     @property
@@ -126,6 +126,10 @@ class DatabaseCondition(BaseCondition):
             str(col) for col
             in (self._specified_columns or self._default_columns)
         ]
+
+    @data_columns.setter
+    def data_columns(self, value):
+        self._specified_columns = value
 
     @property
     def clause(self):
@@ -246,15 +250,15 @@ class DatabaseCondition(BaseCondition):
     def to_dict(self):
         obj_dict = super().to_dict()
         if self._specified_columns:
-            obj_dict['_specified_columns'] = self._specified_columns
+            obj_dict['data_columns'] = self.data_columns
 
         return obj_dict
 
     @classmethod
     def from_dict(cls, obj_dict):
         obj = super().from_dict(obj_dict)
-        if '_specified_columns' in obj_dict:
-            obj._specified_columns = obj_dict['_specified_columns']
+        if 'data_columns' in obj_dict:
+            obj.data_columns = obj_dict['data_columns']
         return obj
 
     def __or__(self, other):
