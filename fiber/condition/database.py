@@ -60,19 +60,18 @@ class DatabaseCondition(BaseCondition):
         **kwargs
     ):
         """
-        :param Set mrns: Set of MRN-Strings for which the condition is true.
-        :param List children:
-            List of child conditions which were combined with an operator.
-        :param Str operator:
-            String representing the combination of the child condition
-            (e.g. ``BaseCondition.AND``)
-        :param Set dimensions:
-            A set of tables that need to be joined on the ``base_table``
-        :param ClauseElement clause:
-            The SQLAlchemy clause of the current condition to select patients.
-        :param ColumnElement data_columns:
-            The SQLAlchemy data_columns that should be returned when
-            ``.get_data()`` is called.
+        Args:
+            Set mrns: Set of MRN-Strings for which the condition is true.
+            List children: List of child conditions which were combined with an
+                operator.
+            Str operator: String representing the combination of the child
+                condition (e.g. ``BaseCondition.AND``)
+            Set dimensions: A set of tables that need to be joined on the
+                ``base_table``
+            ClauseElement clause: The SQLAlchemy clause of the current
+                condition to select patients.
+            ColumnElement data_columns: The SQLAlchemy data_columns that should
+                be returned when ``.get_data()`` is called.
 
         In our case ``dimension`` and ``clause`` are only used on the fact
         table. To minimize the executed joins and queries. This might be

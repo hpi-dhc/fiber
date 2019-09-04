@@ -2,13 +2,16 @@ from typing import Set
 from cachetools import cached
 import json
 
+from typing import Optional, Any, List, Dict
 
 # They can get very large (implement own version of Cachetools Cache)
 mrn_cache = {}
 data_cache = {}
 
 
-def _hash_request(instance, included_mrns=None, limit=None):
+def _hash_request(instance: Any,
+                  included_mrns: Optional[Set] = None,
+                  limit: Optional[int] = None):
     return hash(
         str(hash(instance)) +
         str(hash(frozenset(included_mrns or []))) +
@@ -28,17 +31,17 @@ class BaseCondition:
     def __init__(
         self,
         mrns: Set[str] = None,
-        children=None,
-        operator=None,
+        children: Optional[List] = None,
+        operator: Optional[str] = None,
         **kwargs,
     ):
         """
-        :param Set mrns: Set of MRN-Strings for which the condition is true.
-        :param List children:
-            List of child conditions which were combined with an operator.
-        :param String operator:
-            String representing the combination of the child condition
-            (e.g. ``BaseCondition.AND``)
+        Args:
+            mrns: Set of MRN-Strings for which the condition is true.
+            children: List of child conditions which were combined with an
+                operator.
+            operator: String representing the combination of the child
+                condition (e.g. ``BaseCondition.AND``)
         """
         self._mrns = mrns or set()
         self.children = children
@@ -46,13 +49,13 @@ class BaseCondition:
         self._attrs = {}
 
     @cached(cache=mrn_cache, key=_hash_request)
-    def get_mrns(self, limit=None):
+    def get_mrns(self, limit: Optional[int] = None):
         """Fetches the mrns of a condition and returns them"""
         if not self._mrns:
             self._mrns = self._fetch_mrns(limit=limit)
         return self._mrns
 
-    def _fetch_mrns(self, limit=None) -> Set[str]:
+    def _fetch_mrns(self, limit: Optional[int] = None) -> Set[str]:
         """
         Must be implemented by subclasses to return a set of MRNs for which
         the condition holds true. This is called by ``.get_mrns()``
@@ -60,7 +63,9 @@ class BaseCondition:
         raise NotImplementedError
 
     @cached(cache=data_cache, key=_hash_request)
-    def get_data(self, included_mrns=None, limit=None):
+    def get_data(self,
+                 included_mrns: Optional[Set] = None,
+                 limit: Optional[int] = None):
         """
         Fetches data based on patients defined via this condition and the
         patients given with ``included_mrns``. For each of the patients this
@@ -70,7 +75,9 @@ class BaseCondition:
         """
         return self._fetch_data(included_mrns, limit=limit)
 
-    def _fetch_data(self, included_mrns=None, limit=None):
+    def _fetch_data(self,
+                    included_mrns: Optional[Set] = None,
+                    limit: Optional[int] = None):
         """
         Can be implemented by subclasses to return relevant data dependant on
         the condition. This is called by ``.get_data()``
@@ -120,7 +127,7 @@ class BaseCondition:
             }
 
     @classmethod
-    def from_dict(cls, json):
+    def from_dict(cls, json: Dict):
         """
         Loads a single condition based on the json by instantiating them with
         the `attributes` defined in the json.

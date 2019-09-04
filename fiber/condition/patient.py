@@ -33,10 +33,11 @@ class Patient(DatabaseCondition):
         **kwargs
     ):
         """
-        :param String gender: The gender of the Patient (e.g. 'Male','Female')
-        :param String religion:
-            The religion of the Patient (e.g. 'Hindu','Catholic')
-        :param String race: The race of the Patient (e.g. 'Hispanic/Latino')
+        Args:
+            String gender: The gender of the Patient (e.g. 'Male','Female')
+            String religion:
+                The religion of the Patient (e.g. 'Hindu','Catholic')
+            String race: The race of the Patient (e.g. 'Hispanic/Latino')
 
         The string parameters are used in the SQL-LIKE statement after being
         converted to uppercase. This means that  ``%``, ``_`` and  ``[]`` can
@@ -49,6 +50,13 @@ class Patient(DatabaseCondition):
 
     def _create_clause(self):
         clause = super()._create_clause()
+        """
+        Used to create a SQLAlchemy clause based on the Patient-condition.
+        It is used to select the correct patients based on the category
+        provided at initialization-time.
+        :return:
+        """
+
         if self._attrs['gender']:
             clause &= _case_insensitive_like(
                 d_pers.GENDER, self._attrs['gender'])
@@ -64,6 +72,17 @@ class Patient(DatabaseCondition):
         return clause
 
     def _create_query(self):
+        """
+        Creates an instance of a SQLAlchemy query which only returns MRNs.
+
+        This query should yield all medical record numbers in the
+        ``base_table`` of the condition. It uses the ``.clause`` to select
+        the relevant patients.
+
+        This query is also used by other functions which change the selected
+        columns to get data about the patients.
+        """
+
         return orm.Query(self.base_table).filter(
             self.clause
         ).filter(

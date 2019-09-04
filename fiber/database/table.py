@@ -4,8 +4,17 @@ from fiber.database import get_meta
 
 
 class Table(SQLATable):
+    """
+    This class extends the SQLAlchemy table by functionality to provide
+    information about attributes and create a new instance of tables
+    """
 
     def __getattr__(self, attr):
+        """
+        receive the column of the db table
+        :param attr: name of the column as stored in db
+        :return: the column with the name specified
+        """
         attr = attr.upper()
 
         if attr in self.columns:
@@ -14,6 +23,11 @@ class Table(SQLATable):
             raise AttributeError(f"Table {self.name} has no column {attr}")
 
     def __new__(cls, name):
+        """
+        receive a new table as specified
+        :param name: name of the table to receive
+        :return: table reference as specified from the parameter
+        """
         meta = get_meta()
         cls.META = meta
         name = f'{meta.schema}.{name}' if meta.schema else name

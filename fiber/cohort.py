@@ -168,6 +168,16 @@ class Cohort:
         self,
         condition,
     ):
+        """
+        receive the occurrences of the specified condition for this cohort
+
+        Args:
+            condition: condition to search for occurrences in data regarding
+                this cohort
+
+        :return: df containing the occurrences for the specified cohort with
+            respective age_in_days-entries.
+        """
         # (TODO) Check if selection of distinct timestamp can be moved to db
         # for DatabaseConditions
         occurrences = self.get(condition)
@@ -177,6 +187,20 @@ class Cohort:
         self,
         relative_to=None, before=None, after=None,
     ):
+        """
+        functionality to check if only one of relative_to, before or after is
+        specified and to fetch data on basis of the parameters. data will be
+        either trimmed in case of the before or after parameter, or simply
+        returned completely with respective time-deltas in case of relative_to
+
+        Args:
+            relative_to: condition describing data-points per MRNs
+            before: condition describing data-points per MRNs
+            after: condition describing data-points per MRNs
+
+        :return: occurrences of this cohort on basis of the specified
+            [relative_to, before, after] from self.get_occurrences
+        """
         arg_count = sum([bool(relative_to), bool(before), bool(after)])
         if arg_count == 0:
             return self.get_occurrences(self._condition)
@@ -195,6 +219,18 @@ class Cohort:
         before=None,
         after=None
     ):
+        """
+        functionality to receive data points, but not the values, for this
+        cohort on the basis of the specified target condition
+
+        Args:
+            target: condition to check for occurrences in this cohort
+            relative_to: condition describing data-points per MRNs
+            before: condition describing data-points per MRNs
+            after: condition describing data-points per MRNs
+
+        :return: df with mrn and age_in_days for the respective condition
+        """
         event_df = self._validate_and_get_event_df(
             relative_to, before, after)
         target_df = self.get_occurrences(target)
@@ -215,6 +251,18 @@ class Cohort:
         before=None,
         after=None
     ):
+        """
+        functionality to receive data points, including the values, for this
+        cohort on the basis of the specified target condition
+
+        Args:
+            target: condition to check for occurrences in this cohort
+            relative_to: condition describing data-points per MRNs
+            before: condition describing data-points per MRNs
+            after: condition describing data-points per MRNs
+
+        :return: df with values, mrn, age_in_days for the respective condition
+        """
         event_df = self._validate_and_get_event_df(
             relative_to, before, after)
         target_df = self.get(target)
@@ -233,6 +281,19 @@ class Cohort:
         aggregation_functions,
         name: str = 'interval',
     ):
+        """
+        functionality used to pivot the df within the specified time_windows on
+        basis of the aggregation_functions on the specified name
+
+        Args:
+            time_windows: the time_windows the data should be trimmed to
+            df: the df that shall be pivoted
+            aggregation_functions: how to aggregate specified cols when
+                pivoting
+            name: the name to pivot data towards
+
+        :return: the pivoted, aggregated, prefixed and time-clipped df
+        """
         results = aggregate_df_with_windows(
             time_windows,
             df,
@@ -250,7 +311,6 @@ class Cohort:
         df,
         name: str = 'interval',
     ):
-
         results = aggregate_df_with_windows(
             time_windows,
             df,
@@ -269,8 +329,20 @@ class Cohort:
         condition,
         time_windows=None,
     ):
-        co_occurrence = self.occurs(condition)
+        """
+        functionality to check whether the elements of the cohort have an onset
+        of the specified condition in the specified time-windows or from
+        ((0, 1), (0, 7), (0, 14), (0, 28))-days after the MRNs met the criteria
+        of the base_condition of the cohort
 
+        Args:
+            name: name of the condition to check for
+            condition: the condition to check for
+            time_windows: the time_windows for which the data should tested
+
+        :return: df containing the onset in the relative time-window
+        """
+        co_occurrence = self.occurs(condition)
         time_windows = time_windows or ((0, 1), (0, 7), (0, 14), (0, 28))
         return self.has_occurrence_in(
             time_windows=time_windows,
@@ -284,8 +356,18 @@ class Cohort:
         condition,
         time_windows=None,
     ):
-        co_occurrence = self.occurs(condition)
+        """
+        functionality to check if the elements of the cohort have a
+        precondition within the specified time-windows
 
+        Args:
+            name: name of the precondition
+            condition: condition-element to check for
+            time_windows: the time_windows the data should be trimmed to
+
+        :return: df containing bool entries for the precondition per mrn
+        """
+        co_occurrence = self.occurs(condition)
         time_windows = time_windows or ((-math.inf, 0), )
         return self.has_occurrence_in(
             time_windows=time_windows,
@@ -294,6 +376,15 @@ class Cohort:
         )
 
     def merge_patient_data(self, *dataframes):
+        """
+        functionality to merge the data specified in the df's on the patients
+        data-points
+
+        Args:
+            dataframes: data to merge the patients data with
+
+        :return: data merged in one single df
+        """
         base = self.get_occurrences(self._condition).merge(
             self.get(Patient()), on=['medical_record_number']
         )
@@ -301,10 +392,10 @@ class Cohort:
 
     @property
     def demographics(self):
-        '''
+        """
         Generates basic cohort demographics for patients' age and
         gender distribution, including plots.
-        '''
+        """
         condition_events = self.get_occurrences(self._condition)
         s_age = condition_events[
             condition_events.age_in_days < 50000
@@ -333,7 +424,9 @@ class Cohort:
         }
 
     def __len__(self):
+        """ :return: amount of MRNs in this cohort """
         return len(self._condition)
 
     def __iter__(self):
+        """ :return: iterator object on basis of the MRNs of this cohort """
         return iter(self.mrns())

@@ -7,7 +7,14 @@ from fiber.database.table import (
 
 
 class Diagnosis(FactCondition):
+    """
+    The Diagnosis adds functionality to the FactCondition. It allows to combine
+    SQL Statements that shall be performed on the FACT-Table with dimension
+    'DIAGNOSIS' (and optionally age-constraints on the dates).
 
+    It also defines default-columns to return, MEDICAL_RECORD_NUMBER,
+    AGE_IN_DAYS, CONTEXT_NAME and the code_column in this case respectively.
+    """
     dimensions = {'DIAGNOSIS'}
     d_table = fd_diag
     code_column = fd_diag.CONTEXT_DIAGNOSIS_CODE
