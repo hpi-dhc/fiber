@@ -1,9 +1,11 @@
 from abc import ABC
 
+from typing import Optional, Dict
+
 
 class ComparisonMixin(ABC):
 
-    def __init__(self, *args, discard_nans=True, **kwargs):
+    def __init__(self, *args, discard_nans: Optional[bool] = True, **kwargs):
         super().__init__(*args, **kwargs)
         self._attrs['discard_nans'] = discard_nans
 
@@ -26,7 +28,7 @@ class ComparisonMixin(ABC):
         return clause
 
     @classmethod
-    def from_dict(cls, json):
+    def from_dict(cls, json: Dict):
         obj = super().from_dict(json)
         if 'comp_operator' in json['attributes']:
             obj._attrs['comp_operator'] = json['attributes']['comp_operator']

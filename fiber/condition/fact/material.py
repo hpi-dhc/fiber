@@ -8,7 +8,14 @@ from fiber.database.table import (
 
 
 class Material(FactCondition):
+    """
+    The Material adds functionality to the FactCondition. It allows to combine
+    SQL Statements that shall be performed on the FACT-Table with dimension
+    'MATERIAL' (and optionally age-constraints on the dates).
 
+    It also defines default-columns to return, MEDICAL_RECORD_NUMBER,
+    AGE_IN_DAYS, CONTEXT_NAME and the code_column in this case respectively.
+    """
     dimensions = {'MATERIAL'}
     d_table = fd_mat
     code_column = fd_mat.CONTEXT_MATERIAL_CODE
@@ -24,6 +31,14 @@ class Material(FactCondition):
 
 
 class Drug(Material):
+    """
+    The Drug adds functionality to the Material. It allows to combine
+    SQL Statements that shall be performed on the FACT-Table with dimension
+    'MATERIAL' and category 'Drug' (optionally age-constraints on the dates).
+
+    Default-columns to return, MEDICAL_RECORD_NUMBER, AGE_IN_DAYS, CONTEXT_NAME
+    and the code_column are defined in the super-class Material.
+    """
 
     def __init__(
         self,
@@ -33,6 +48,13 @@ class Drug(Material):
         *args,
         **kwargs
     ):
+        """
+        Args:
+            name: the name of the drug to query for, referring to
+                MATERIAL_NAME, GENERIC_NAME or BRAND_NAME
+            args: the arguments to pass higher in the hierarchy
+            kwargs: the keyword-arguments to pass higher in the hierarchy
+        """
         kwargs['category'] = 'Drug'
         super().__init__(*args, **kwargs)
         self._attrs['name'] = name
@@ -41,10 +63,18 @@ class Drug(Material):
 
     @property
     def name(self):
+        """This shall return the drugs name, being either MATERIAL_NAME,
+        GENERIC_NAME or BRAND_NAME."""
         return self._attrs['name']
 
     def _create_clause(self):
         clause = super()._create_clause()
+        """
+        Used to create a SQLAlchemy clause based on the Drug-condition.
+        It is used to select the correct drugs based on the name provided at
+        initialization-time.
+        """
+
         if self.name:
             clause &= (
                 _multi_like_clause(fd_mat.MATERIAL_NAME, self.name) |

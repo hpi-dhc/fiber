@@ -27,7 +27,14 @@ from fiber.database.table import (
 
 
 class FactCondition(AgeMixin, DatabaseCondition):
+    """
+    The FactCondition adds functionality to the DatabaseCondition. It allows
+    to combine SQL Statements that shall be performed on the FACT-Table with
+    age-constraints on the dates.
 
+    It also defines which dimensions shall be mapped in which fashion, in order
+    to capsule the context-joins on db-side from the user.
+    """
     base_table = fact
     dimensions_map = {
         'PROCEDURE': (fd_proc, b_proc),
@@ -47,6 +54,16 @@ class FactCondition(AgeMixin, DatabaseCondition):
         description: str = '',
         **kwargs
     ):
+        """
+        Args:
+            code: can be any code from the medical context, like 035.%
+                the '%' sign works as a *-mapping.
+            context: can be any context from the medical context, like ICD-9
+            category: the category to search for
+            description: can be any string to search for.
+                Can contain %-Wildcards.
+            kwargs: arguments that shall be passed higher in the hierarchy
+        """
         if 'dimensions' not in kwargs:
             kwargs['dimensions'] = self.dimensions
         super().__init__(**kwargs)
@@ -66,26 +83,31 @@ class FactCondition(AgeMixin, DatabaseCondition):
 
     @property
     def code_column(self):
-        """"""
+        """This property should return the code column."""
         raise NotImplementedError
 
     @property
     def description_column(self):
-        """"""
+        """This property should return the description column."""
         raise NotImplementedError
 
     @property
     def category_column(self):
-        """"""
+        """This property should return the category column."""
         raise NotImplementedError
 
     @property
     def default_aggregations(self):
+        """This returns the default-aggregations: 'count' the code-column."""
         return {
             self.code_column.name.lower(): 'count'
         }
 
     def _create_clause(self):
+        """
+        Used to create a SQLAlchemy clause based on the fact-condition.
+        It is used to select the correct patients.
+        """
         clause = super()._create_clause()
 
         if self._attrs['context']:
@@ -106,6 +128,17 @@ class FactCondition(AgeMixin, DatabaseCondition):
         return clause
 
     def _create_query(self):
+        """
+        Creates an instance of a SQLAlchemy query which only returns MRNs.
+
+        This query should yield all medical record numbers in the
+        ``base_table`` of the condition (fact in this case).
+        It uses the ``.clause`` to select the relevant patients.
+
+        This query is also used by other function which change the selected
+        columns to get data about the patients.
+        """
+
         q = orm.Query(self.base_table).join(
             d_pers,
             self.base_table.person_key == d_pers.person_key

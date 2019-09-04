@@ -10,6 +10,18 @@ def merge_event_dfs(
     before=None,
     after=None,
 ):
+    """
+    functionality to combine the two df's passed in. can be trimmed on basis of
+    the before and after parameters.
+
+    Args:
+        event_df: baseline of the merge
+        target_df: the df to merge with and to compute time_delta_in_days
+        before: bool, to remove positive time_delta_in_days
+        after: bool, to remove negative time_delta_in_days
+
+    :return: merged df, time-trimmed if specified
+    """
     df = event_df.merge(
         target_df, how='left', on='medical_record_number')
 

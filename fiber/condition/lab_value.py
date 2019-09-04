@@ -35,14 +35,14 @@ class LabValue(AgeMixin, ComparisonMixin, DatabaseCondition):
         **kwargs
     ):
         """
-        :param String name:
-            This is the name of the selected test (e.g. 'GLUCOSE',
-            'HEMOGLOBIN')
-        :param Bool abnormal:
-            If this is set the lab values will either only contain values that
-            are with in the expected range for a helthy person
-            (``abnormal=False``) or only return values that are abnormal
-            (``abnormal=True``)
+        Args:
+            String name:
+                This is the name of the selected test (e.g. 'GLUCOSE',
+                'HEMOGLOBIN')
+            Bool abnormal: If this is set the lab values will either only
+                contain values that are with in the expected range for a
+                healthy person (``abnormal=False``) or only return values that
+                are abnormal (``abnormal=True``)
 
         The string parameters are used in the SQL-LIKE statement after being
         converted to uppercase. This means that  ``%``, ``_`` and  ``[]`` can
