@@ -3,12 +3,12 @@ from typing import Iterable, Union
 import pandas as pd
 
 from fiber import OCCURRENCE_INDEX
-from fiber.condition.base import BaseCondition
+from fiber.condition.base import _BaseCondition
 
 
-class MRNs(BaseCondition):
+class MRNs(_BaseCondition):
     """
-    The MRNs-Condition adds functionality to the BaseCondition. It allows to
+    The MRNs-Condition adds functionality to the _BaseCondition. It allows to
     combine SQL Statements that shall be performed on the FACT-Table.
     """
 

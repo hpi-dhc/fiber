@@ -1,5 +1,5 @@
 from .diagnosis import Diagnosis
-from .fact import FactCondition
+from .fact import _FactCondition
 from .encounter import Encounter
 from .material import (
     Drug,
@@ -25,7 +25,7 @@ __all__ = [
     'Drug',
     'DrugUse',
     'Encounter',
-    'FactCondition',
+    '_FactCondition',
     'Height',
     'Material',
     'Measurement',

@@ -1,4 +1,4 @@
-from fiber.condition.fact.fact import FactCondition
+from fiber.condition.fact.fact import _FactCondition
 from fiber.condition.mixins import ComparisonMixin
 from fiber.database.table import (
     d_pers,
@@ -8,7 +8,7 @@ from fiber.database.table import (
 )
 
 
-class Procedure(FactCondition):
+class Procedure(_FactCondition):
     """
     The Procedure adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension

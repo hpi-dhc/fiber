@@ -6,9 +6,9 @@ from typing import Set, List, Union, Tuple, Optional
 import pandas as pd
 
 from fiber import OCCURRENCE_INDEX
-from fiber.condition.base import BaseCondition
+from fiber.condition.base import _BaseCondition
 from fiber.condition import (
-    DatabaseCondition,
+    _DatabaseCondition,
     LabValue,
     MRNs,
     Patient,
@@ -41,7 +41,7 @@ class Cohort:
         limit: The maximum number of Patients that the Cohort should hold.
     """
 
-    def __init__(self, condition: BaseCondition, limit: Optional[int] = None):
+    def __init__(self, condition: _BaseCondition, limit: Optional[int] = None):
         self._condition = condition
         self._excluded_mrns = set()
         self._mrn_limit = limit
@@ -126,8 +126,8 @@ class Cohort:
 
     def get(
             self,
-            data_condition: BaseCondition,
-            *args: BaseCondition,
+            data_condition: _BaseCondition,
+            *args: _BaseCondition,
             limit: Optional[int] = None,
     ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
         """Fetch data for all members of the Cohort.
@@ -151,14 +151,14 @@ class Cohort:
         # Group Data by BaseTable (:/ only works for DatabaseConditions)
         database_cond = defaultdict(list)
         for cond in data_conditions:
-            if isinstance(cond, DatabaseCondition):
+            if isinstance(cond, _DatabaseCondition):
                 database_cond[cond.base_table].append(cond)
             elif isinstance(cond, MRNs):
                 database_cond[hash(cond)].append(cond)
 
         # Get data per BaseTable
         for c in database_cond.values():
-            c = reduce(DatabaseCondition.__or__, c)
+            c = reduce(_DatabaseCondition.__or__, c)
 
             print(f'Fetching data for {c}')
             data.append(c.get_data(self.mrns(), limit=limit))

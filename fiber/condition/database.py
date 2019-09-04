@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 
 import fiber
-from fiber.condition.base import BaseCondition
+from fiber.condition.base import _BaseCondition
 from fiber.database import (
     compile_sqla,
     read_with_progress,
@@ -37,7 +37,7 @@ def _multi_like_clause(column, value_or_values):
     )
 
 
-class DatabaseCondition(BaseCondition):
+class _DatabaseCondition(_BaseCondition):
     """
     The DatabaseCondition adds functionality to the BaseCondition which
     is needed to run queries against a database. It also allows to combine
@@ -65,7 +65,7 @@ class DatabaseCondition(BaseCondition):
             List children: List of child conditions which were combined with an
                 operator.
             Str operator: String representing the combination of the child
-                condition (e.g. ``BaseCondition.AND``)
+                condition (e.g. ``_BaseCondition.AND``)
             Set dimensions: A set of tables that need to be joined on the
                 ``base_table``
             ClauseElement clause: The SQLAlchemy clause of the current
@@ -262,7 +262,7 @@ class DatabaseCondition(BaseCondition):
 
     def __or__(self, other):
         """
-        The DatabaseCondition optimizes the SQL statements for ``|`` by
+        The _DatabaseCondition optimizes the SQL statements for ``|`` by
         combining the clauses of condition which run on the same database
         table. This is done via the ``.base_table`` attribute.
         """
@@ -279,13 +279,13 @@ class DatabaseCondition(BaseCondition):
                 clause=self.clause | other.clause,
                 data_columns=unique_columns,
                 children=[self, other],
-                operator=BaseCondition.OR,
+                operator=_BaseCondition.OR,
             )
         else:
-            return BaseCondition(
+            return _BaseCondition(
                 mrns=self.get_mrns() | other.get_mrns(),
                 children=[self, other],
-                operator=BaseCondition.OR,
+                operator=_BaseCondition.OR,
             )
 
     def __and__(self, other):
@@ -295,7 +295,7 @@ class DatabaseCondition(BaseCondition):
             mrns=self.get_mrns() & other.get_mrns(),
             dimensions=self.dimensions | other.dimensions,
             children=[self, other],
-            operator=BaseCondition.AND,
+            operator=_BaseCondition.AND,
         )
 
     def __repr__(self):

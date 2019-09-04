@@ -1,4 +1,4 @@
-from fiber.condition.fact.fact import FactCondition
+from fiber.condition.fact.fact import _FactCondition
 from fiber.database.table import (
     d_pers,
     fact,
@@ -6,7 +6,7 @@ from fiber.database.table import (
 )
 
 
-class Diagnosis(FactCondition):
+class Diagnosis(_FactCondition):
     """
     The Diagnosis adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension

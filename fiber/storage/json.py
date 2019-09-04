@@ -2,12 +2,12 @@ import json
 
 
 import fiber.condition
-from fiber.condition import BaseCondition
+from fiber.condition import _BaseCondition
 
 
 _OPERATORS = {
-    BaseCondition.AND: '__and__',
-    BaseCondition.OR: '__or__',
+    _BaseCondition.AND: '__and__',
+    _BaseCondition.OR: '__or__',
 }
 
 

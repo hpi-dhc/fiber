@@ -1,5 +1,5 @@
 from fiber.condition.database import _case_insensitive_like
-from fiber.condition.fact.fact import FactCondition
+from fiber.condition.fact.fact import _FactCondition
 from fiber.database.table import (
     d_pers,
     fact,
@@ -9,7 +9,7 @@ from fiber.database.table import (
 from typing import Set, Optional
 
 
-class MetaData(FactCondition):
+class MetaData(_FactCondition):
     """
     The MetaData adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension

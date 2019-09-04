@@ -19,9 +19,9 @@ def _hash_request(instance: Any,
     )
 
 
-class BaseCondition:
+class _BaseCondition:
     """
-    The BaseCondition supplies a basic interface to combine conditional
+    The _BaseCondition supplies a basic interface to combine conditional
     statements. It is the base to create custom conditions with further
     functionality.
     """
@@ -41,7 +41,7 @@ class BaseCondition:
             children: List of child conditions which were combined with an
                 operator.
             operator: String representing the combination of the child
-                condition (e.g. ``BaseCondition.AND``)
+                condition (e.g. ``_BaseCondition.AND``)
         """
         self._mrns = mrns or set()
         self.children = children
@@ -104,7 +104,7 @@ class BaseCondition:
         >>> Patient(gender='Male').to_dict()
         {class:'Patient', attributes:{gender:'Male', religion:None, race:None}
 
-        In the BaseCondition the dict of subclasses is combined with the
+        In the _BaseCondition the dict of subclasses is combined with the
         operators connecting them.
 
         >>> (Patient(...) & Patient(...)).to_dict()
@@ -146,10 +146,10 @@ class BaseCondition:
         level this happens via ``Set`` operations on the MRNs that are fetched
         for each condition individually.
         """
-        return BaseCondition(
+        return _BaseCondition(
                 mrns=self.get_mrns() | other.get_mrns(),
                 children=[self, other],
-                operator=BaseCondition.OR,
+                operator=_BaseCondition.OR,
             )
 
     def __and__(self, other):
@@ -158,10 +158,10 @@ class BaseCondition:
         level this happens via ``Set`` operations on the MRNs that are fetched
         for each condition individually.
         """
-        return BaseCondition(
+        return _BaseCondition(
                 mrns=self.get_mrns() & other.get_mrns(),
                 children=[self, other],
-                operator=BaseCondition.AND,
+                operator=_BaseCondition.AND,
             )
 
     def __len__(self):

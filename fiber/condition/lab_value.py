@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import orm
 
 from fiber.database.table import epic_lab
-from fiber.condition import DatabaseCondition
+from fiber.condition import _DatabaseCondition
 from fiber.condition.mixins import (
     AgeMixin,
     ComparisonMixin,
@@ -10,7 +10,7 @@ from fiber.condition.mixins import (
 from fiber.condition.database import _case_insensitive_like
 
 
-class LabValue(AgeMixin, ComparisonMixin, DatabaseCondition):
+class LabValue(AgeMixin, ComparisonMixin, _DatabaseCondition):
     """
     LabValue is based of Database condition and accesses the EPIC_LAB table it
     contains information about laboratory test which are done for instance on

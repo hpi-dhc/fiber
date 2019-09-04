@@ -1,5 +1,5 @@
-from .base import BaseCondition
-from .database import DatabaseCondition
+from .base import _BaseCondition
+from .database import _DatabaseCondition
 
 from . import fact
 from .fact import *  # noqa
@@ -9,8 +9,8 @@ from .lab_value import LabValue
 from .mrns import MRNs
 
 __all__ = [
-    'BaseCondition',
-    'DatabaseCondition',
+    '_BaseCondition',
+    '_DatabaseCondition',
     'Patient',
     'LabValue',
     'MRNs',

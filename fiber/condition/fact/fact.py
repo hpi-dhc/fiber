@@ -5,7 +5,7 @@ from typing import (
 
 from sqlalchemy import orm
 
-from fiber.condition import DatabaseCondition
+from fiber.condition import _DatabaseCondition
 from fiber.condition.mixins import AgeMixin
 from fiber.condition.database import (
     _case_insensitive_like,
@@ -26,9 +26,9 @@ from fiber.database.table import (
 )
 
 
-class FactCondition(AgeMixin, DatabaseCondition):
+class _FactCondition(AgeMixin, _DatabaseCondition):
     """
-    The FactCondition adds functionality to the DatabaseCondition. It allows
+    The _FactCondition adds functionality to the _DatabaseCondition. It allows
     to combine SQL Statements that shall be performed on the FACT-Table with
     age-constraints on the dates.
 

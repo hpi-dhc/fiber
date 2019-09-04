@@ -1,13 +1,13 @@
 from sqlalchemy import orm, extract
 
 from fiber.database.table import d_pers, fact
-from fiber.condition import DatabaseCondition, BaseCondition
+from fiber.condition import _DatabaseCondition, _BaseCondition
 from fiber.condition.database import _case_insensitive_like
 
 
-class Patient(DatabaseCondition):
+class Patient(_DatabaseCondition):
     """
-    The patient is based of the DatabaseCondition and accesses the D_Person
+    The patient is based of the _DatabaseCondition and accesses the D_Person
     table of MSDW. It contains general information about the patients.
     (e.g. YEAR_OF_BIRTH, MONTH_OF_BIRTH, GENDER, ADDRESS_ZIP, ...)
     """
@@ -104,7 +104,7 @@ class Patient(DatabaseCondition):
                 dimensions=self.dimensions | other.dimensions,
                 clause=self.clause & other.clause,
                 children=[self, other],
-                operator=BaseCondition.AND,
+                operator=_BaseCondition.AND,
             )
         else:
             return super().__and__(self, other)
