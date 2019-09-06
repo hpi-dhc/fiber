@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import (
    create_engine,
    MetaData,
@@ -6,7 +8,11 @@ from sqlalchemy.orm import sessionmaker
 
 from fiber.database.meta import add_tables
 
-DATABASE_URI = f'sqlite:///:memory:'
+database_path = os.path.join(
+   os.path.dirname(__file__),
+   './../../tests/mock_data.db'
+)
+DATABASE_URI = f'sqlite:///{database_path}'
 
 engine = create_engine(DATABASE_URI)
 Session = sessionmaker(bind=engine)

@@ -68,7 +68,7 @@ def get_condition(
         conditions.append(reduce(
             condition_class.__or__,
             [
-                condition_class(context=context, code=code)
+                condition_class(context=context, code=str(code))
                 for code in df[df.name == name][context].iloc[0]
             ]
         ))
