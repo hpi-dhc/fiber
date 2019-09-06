@@ -74,4 +74,7 @@ def read_with_progress(query_or_statement, engine, silent=False):
             ])
         except ValueError:
             result = pd.DataFrame()
+
+    result.columns = map(str.lower, result.columns)
+
     return result

@@ -42,13 +42,13 @@ class Cohort:
     """
 
     def __init__(self, condition: _BaseCondition, limit: Optional[int] = None):
-        self._condition = condition
+        self.condition = condition
         self._excluded_mrns = set()
         self._mrn_limit = limit
 
     def mrns(self) -> Set[str]:
         """Get the MRN of each individual Cohort member."""
-        return (self._condition.get_mrns(limit=self._mrn_limit)
+        return (self.condition.get_mrns(limit=self._mrn_limit)
                 - self._excluded_mrns)
 
     def exclude(self, mrns: Union[Set[str], List[str]]):
@@ -203,7 +203,7 @@ class Cohort:
         """
         arg_count = sum([bool(relative_to), bool(before), bool(after)])
         if arg_count == 0:
-            return self.get_occurrences(self._condition)
+            return self.get_occurrences(self.condition)
         elif arg_count == 1:
             return self.get_occurrences(relative_to or before or after)
         else:
@@ -302,7 +302,7 @@ class Cohort:
         )
 
         # merge with all occurrences of the cohort condition again
-        base = self.get_occurrences(self._condition)
+        base = self.get_occurrences(self.condition)
         return merge_to_base(base, results)
 
     def has_occurrence_in(
@@ -320,7 +320,7 @@ class Cohort:
         )
 
         # merge with all occurrences of the cohort condition again
-        base = self.get_occurrences(self._condition)
+        base = self.get_occurrences(self.condition)
         return merge_to_base(base, results).fillna(value=False)
 
     def has_onset(
@@ -385,7 +385,7 @@ class Cohort:
 
         :return: data merged in one single df
         """
-        base = self.get_occurrences(self._condition).merge(
+        base = self.get_occurrences(self.condition).merge(
             self.get(Patient()), on=['medical_record_number']
         )
         return merge_to_base(base, dataframes)
@@ -396,7 +396,7 @@ class Cohort:
         Generates basic cohort demographics for patients' age and
         gender distribution, including plots.
         """
-        condition_events = self.get_occurrences(self._condition)
+        condition_events = self.get_occurrences(self.condition)
         s_age = condition_events[
             condition_events.age_in_days < 50000
         ].groupby(
@@ -425,7 +425,7 @@ class Cohort:
 
     def __len__(self):
         """ :return: amount of MRNs in this cohort """
-        return len(self._condition)
+        return len(self.condition)
 
     def __iter__(self):
         """ :return: iterator object on basis of the MRNs of this cohort """

@@ -1,4 +1,4 @@
-from sqlalchemy import orm, extract
+from sqlalchemy import orm
 
 from fiber.database.table import d_pers, fact
 from fiber.condition import _DatabaseCondition, _BaseCondition
@@ -14,7 +14,7 @@ class Patient(_DatabaseCondition):
     base_table = d_pers
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
-        extract('year', d_pers.DATE_OF_BIRTH).label('YEAR_OF_BIRTH'),
+        d_pers.DATE_OF_BIRTH,
         d_pers.MONTH_OF_BIRTH,
         d_pers.GENDER,
         d_pers.RELIGION,
@@ -67,8 +67,6 @@ class Patient(_DatabaseCondition):
             clause &= _case_insensitive_like(
                 d_pers.RACE, self._attrs['race'])
 
-        # cast(extract('year', dp.DATE_OF_BIRTH),sqlalchemy.Integer) != 1066
-        # currentYear = datetime.datetime.now().year
         return clause
 
     def _create_query(self):
