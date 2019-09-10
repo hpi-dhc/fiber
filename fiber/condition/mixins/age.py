@@ -1,6 +1,7 @@
 from abc import ABC
+from typing import Optional
 
-from typing import Optional, Dict
+from fiber.condition.base import _BaseCondition
 
 
 class AgeMixin(ABC):
@@ -39,7 +40,7 @@ class AgeMixin(ABC):
         return self
 
     @classmethod
-    def from_dict(cls, json: Dict):
+    def from_dict(cls: _BaseCondition, json: dict):
         c = super().from_dict(json)
         for a in json['attributes'].get('age_conditions', []):
             c.age_in_days(a['min_days'], a['max_days'])

@@ -1,12 +1,19 @@
+from typing import Optional
+
 from sqlalchemy import orm
 
-from fiber.database.table import d_pers, fact
-from fiber.condition import _DatabaseCondition, _BaseCondition
+from fiber.condition import _BaseCondition, _DatabaseCondition
 from fiber.condition.database import _case_insensitive_like
+from fiber.database.table import d_pers, fact
 
 
 class Patient(_DatabaseCondition):
     """
+    Patients are one basic building-block of FIBER. When querying EHR-DB's
+    one wants to define Cohorts, which are basically the groups of patients,
+    identified via MRN, in order to run analysis on or to use these for machine
+    learning.
+
     The patient is based of the _DatabaseCondition and accesses the D_Person
     table of MSDW. It contains general information about the patients.
     (e.g. YEAR_OF_BIRTH, MONTH_OF_BIRTH, GENDER, ADDRESS_ZIP, ...)
@@ -29,7 +36,10 @@ class Patient(_DatabaseCondition):
     age_in_days = fact.AGE_IN_DAYS
 
     def __init__(
-        self, gender=None, religion=None, race=None,
+        self,
+        gender: Optional[str] = None,
+        religion: Optional[str] = None,
+        race: Optional[str] = None,
         **kwargs
     ):
         """
@@ -54,7 +64,6 @@ class Patient(_DatabaseCondition):
         Used to create a SQLAlchemy clause based on the Patient-condition.
         It is used to select the correct patients based on the category
         provided at initialization-time.
-        :return:
         """
 
         if self._attrs['gender']:
@@ -89,7 +98,7 @@ class Patient(_DatabaseCondition):
             self.mrn_column
         ).distinct()
 
-    def __and__(self, other):
+    def __and__(self, other: _DatabaseCondition):
         """
         The Patient has its own __and__ function, because the SQL can be easily
         combined to optimize performance.

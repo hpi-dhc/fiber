@@ -1,20 +1,24 @@
 from functools import reduce
+from typing import List, Optional
+
 import pandas as pd
 import yaml
 
 from fiber import DEFAULT_STORE_FILE_PATH
+from fiber.condition import _DatabaseCondition
 
 
-def _open_store(condition_class, file_path):
+def _open_store(condition_class: _DatabaseCondition, file_path: str):
     """
-    open json-store for condition specified by condition_class at file_path and
+    open yaml-store for condition specified by condition_class at file_path and
     return the df containing the loaded data
 
     Args:
         condition_class: the condition to load into
         file_path: the path of the json-file
 
-    :return: df containing the loaded data, formerly represented as json
+    Returns:
+        df containing the loaded data, formerly represented as json
     """
     with open(file_path, 'r') as f:
         definitions = yaml.load(
@@ -24,8 +28,8 @@ def _open_store(condition_class, file_path):
 
 
 def get_available_conditions(
-    condition_class,
-    file_path=DEFAULT_STORE_FILE_PATH
+    condition_class: _DatabaseCondition,
+    file_path: Optional[str] = DEFAULT_STORE_FILE_PATH
 ):
     """
     retrieve a list of the conditions stored for the class specified
@@ -35,17 +39,18 @@ def get_available_conditions(
             json-file_path store or at DEFAULT_STORE_FILE_PATH
         file_path: the path to load the available stored conditions from
 
-    :return: list of the conditions stored
+    Returns:
+        list of the conditions stored
     """
     df = _open_store(condition_class, file_path)
     return list(df.name)
 
 
 def get_condition(
-    condition_class,
-    name,
-    coding_schemes,
-    file_path=DEFAULT_STORE_FILE_PATH,
+    condition_class: _DatabaseCondition,
+    name: str,
+    coding_schemes: List[str],
+    file_path: Optional[str] = DEFAULT_STORE_FILE_PATH,
 ):
     """
     receive the condition specified by condition_class, name and coding_scheme
@@ -57,7 +62,8 @@ def get_condition(
         coding_schemes: context's coding the condition
         file_path: the path of the json-file to search for the condition
 
-    :return: condition as loaded from the json-store
+    Returns:
+        condition as loaded from the json-store
     """
     df = _open_store(condition_class, file_path)
     if not df[df.name == name].any().any():

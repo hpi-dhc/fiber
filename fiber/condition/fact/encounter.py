@@ -1,14 +1,21 @@
+from typing import Optional
+
 from fiber.condition.database import _case_insensitive_like
 from fiber.condition.fact.fact import _FactCondition
 from fiber.database.table import (
+    d_enc,
     d_pers,
     fact,
-    d_enc,
 )
 
 
 class Encounter(_FactCondition):
     """
+    Encounters are parts of the building-blocks of FIBER. In order to define
+    Cohorts, Encounters categorize patients as either inpatient or outpatient,
+    meaning they stayed in hospital or were treated somewhere else, and define
+    categories for this, like 'emergency'.
+
     The Encounter adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'ENCOUNTER' (and optionally age-constraints on the dates).
@@ -32,7 +39,7 @@ class Encounter(_FactCondition):
         d_enc.END_DATE_AGE_IN_DAYS,
     ]
 
-    def __init__(self, category: str = '', **kwargs):
+    def __init__(self, category: Optional[str] = '', **kwargs):
         """
         Args:
             category: the category of the encounter to query for
@@ -47,7 +54,6 @@ class Encounter(_FactCondition):
         Used to create a SQLAlchemy clause based on the Encounter-condition.
         It is used to select the correct encoutners based on the category
         provided at initialization-time.
-        :return:
         """
         clause = super()._create_clause()
         if self._attrs['category']:

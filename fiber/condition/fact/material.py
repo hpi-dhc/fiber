@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fiber.condition.database import _multi_like_clause
 from fiber.condition.fact.fact import _FactCondition
 from fiber.database.table import (
@@ -9,6 +11,13 @@ from fiber.database.table import (
 
 class Material(_FactCondition):
     """
+    Materials are parts of the building-blocks of FIBER. In order to define
+    Cohorts, Materials identify all different types of materials used in the
+    clinical context and have MRNs associated to them, identifying which
+    patient received which material. There are many sub-categories existing,
+    while the most useful one is Drugs, which has gotten an own class for that
+    reason.
+
     The Material adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'MATERIAL' (and optionally age-constraints on the dates).
@@ -32,6 +41,11 @@ class Material(_FactCondition):
 
 class Drug(Material):
     """
+    Drugs are parts of the building-blocks of FIBER. In order to define
+    Cohorts, Drugs identify the medications used in the clinical context and
+    have MRNs associated to them, identifying which patient received it. Drugs
+    include brand names as well as generic names, unit and many more.
+
     The Drug adds functionality to the Material. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'MATERIAL' and category 'Drug' (optionally age-constraints on the dates).
@@ -42,9 +56,9 @@ class Drug(Material):
 
     def __init__(
         self,
-        name: str = '',
-        brand: str = '',
-        generic: str = '',
+        name: Optional[str] = '',
+        brand: Optional[str] = '',
+        generic: Optional[str] = '',
         *args,
         **kwargs
     ):

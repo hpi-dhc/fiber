@@ -8,6 +8,9 @@ from fiber.database.table import (
 
 class Diagnosis(_FactCondition):
     """
+    Diagnosis are parts of the building-blocks of FIBER. In order to define
+    Cohorts, Diagnosis fetch patients that were diagnosed as having 'X'.
+
     The Diagnosis adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'DIAGNOSIS' (and optionally age-constraints on the dates).

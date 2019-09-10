@@ -1,4 +1,12 @@
-def time_window_clip(df, window):
+from typing import List, Optional
+
+import pandas as pd
+
+
+def time_window_clip(
+    df: pd.DataFrame,
+    window: List
+):
     """
     Perform inplace interval-based time-clipping.
     Keep only values within the interval.
@@ -14,7 +22,10 @@ def time_window_clip(df, window):
     ]
 
 
-def column_threshold_clip(df, threshold=0):
+def column_threshold_clip(
+    df: pd.DataFrame,
+    threshold: Optional[float] = 0
+):
     """
     Inplace keep only columns with non-NA values percentage above threshold.
 
@@ -23,6 +34,7 @@ def column_threshold_clip(df, threshold=0):
         threshold: can be any float value between: [0.0 - 1.0],
             e.g. 0.7: at least 70% of values in columns do not contain NAN
 
-    :return: df with columns filled above threshold
+    Returns:
+        df with columns filled above threshold
     """
     return df.loc[:, (df.count() >= (len(df.index) * threshold)).tolist()]

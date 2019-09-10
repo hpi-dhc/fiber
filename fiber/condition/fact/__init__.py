@@ -1,6 +1,6 @@
 from .diagnosis import Diagnosis
-from .fact import _FactCondition
 from .encounter import Encounter
+from .fact import _FactCondition
 from .material import (
     Drug,
     Material,
