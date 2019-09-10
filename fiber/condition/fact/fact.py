@@ -1,33 +1,41 @@
 from typing import (
     Iterable,
+    Optional,
     Union,
 )
 
 from sqlalchemy import orm
 
-from fiber.condition import _DatabaseCondition
-from fiber.condition.mixins import AgeMixin
 from fiber.condition.database import (
     _case_insensitive_like,
+    _DatabaseCondition,
     _multi_like_clause,
 )
+from fiber.condition.mixins import AgeMixin
 from fiber.database.table import (
-    d_pers,
-    fact,
-    fd_mat,
-    b_mat,
-    fd_diag,
     b_diag,
-    fd_proc,
+    b_mat,
     b_proc,
-    d_uom,
     d_enc,
     d_meta,
+    d_pers,
+    d_uom,
+    fact,
+    fd_diag,
+    fd_mat,
+    fd_proc
 )
 
 
 class _FactCondition(AgeMixin, _DatabaseCondition):
     """
+    Facts are parts of the building-blocks of FIBER. When querying EHR-DB's
+    one wants to define Cohorts, which are basically the groups of patients,
+    identified via MRN, in order to run analysis on or to use these for machine
+    learning. Facts basically serve as the row-based "record-log" of events.
+    They should not be used by end-users but rather by developers in case these
+    need to extend the FIBER-framework.
+
     The _FactCondition adds functionality to the _DatabaseCondition. It allows
     to combine SQL Statements that shall be performed on the FACT-Table with
     age-constraints on the dates.
@@ -48,10 +56,10 @@ class _FactCondition(AgeMixin, _DatabaseCondition):
 
     def __init__(
         self,
-        code: Union[str, Iterable[str]] = '',
-        context: str = '',
-        category: str = '',
-        description: str = '',
+        code: Optional[Union[str, Iterable[str]]] = '',
+        context: Optional[str] = '',
+        category: Optional[str] = '',
+        description: Optional[str] = '',
         **kwargs
     ):
         """

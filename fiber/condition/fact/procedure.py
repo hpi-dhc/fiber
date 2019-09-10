@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fiber.condition.fact.fact import _FactCondition
 from fiber.condition.mixins import ComparisonMixin
 from fiber.database.table import (
@@ -10,6 +12,10 @@ from fiber.database.table import (
 
 class Procedure(_FactCondition):
     """
+    Procedures are parts of the building-blocks of FIBER. In order to define
+    Cohorts, Procedures help fetching patients that, for example, undergone
+    heart surgery identified by, e.g., ICD-9 code.
+
     The Procedure adds functionality to the FactCondition. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'PROCEDURE' (and optionally age-constraints on the dates).
@@ -33,6 +39,12 @@ class Procedure(_FactCondition):
 
 class Measurement(ComparisonMixin, Procedure):
     """
+    Measurements are part of the building-blocks of FIBER. In order to define
+    Cohorts, Measurements help fetching the patients that had some specific
+    measurement performed on them, like serum-creatinine-values. In many cases
+    there exist subclasses for specific purposes. Make sure to check them out
+    before using this and having to adjust stuff by yourself.
+
     The Measurement adds functionality to the Procedure. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'PROCEDURE' (and optionally age-constraints on the dates as well as
@@ -55,7 +67,7 @@ class Measurement(ComparisonMixin, Procedure):
         d_uom.UNIT_OF_MEASURE
     ]
 
-    def __init__(self, description: str = '', **kwargs):
+    def __init__(self, description: Optional[str] = '', **kwargs):
         """
         Args:
             description: can be any string to search for.
@@ -71,7 +83,8 @@ class Measurement(ComparisonMixin, Procedure):
         """
         This returns the default-aggregations: 'mean', 'min', 'max' and 'count'
         for the value, as well as the 'min' for the time_of_day_key.
-        :return: dictionary containing the specified aggregations
+        Returns:
+            dictionary containing the specified aggregations
         """
         return {
             'value': {
@@ -84,6 +97,10 @@ class Measurement(ComparisonMixin, Procedure):
 
 class VitalSign(Measurement):
     """
+    VitalSigns are part of the building-blocks of FIBER. In order to define
+    Cohorts, VitalSigns help fetching the patients that had some specific
+    measurement performed on them, like temperature.
+
     The VitalSign adds functionality to the Measurement. It allows to combine
     SQL Statements that shall be performed on the FACT-Table with dimension
     'PROCEDURE' (and optionally age-constraints on the dates as well as
@@ -93,7 +110,7 @@ class VitalSign(Measurement):
     TIME_OF_DAY_KEY, CONTEXT_NAME, CONTEXT_PROCEDURE_CODE, NUMERIC_VALUE AND
     UNIT_OF_MEASURE are defined in the super-class.
     """
-    def __init__(self, description: str = '', **kwargs):
+    def __init__(self, description: Optional[str] = '', **kwargs):
         """
         Args:
             description: can be any string to search for.
@@ -122,7 +139,7 @@ class Height(Measurement):
 
 class Weight(Measurement):
     """
-    The Height adds functionality to the VitalSign in order to allow easy
+    The Weight adds functionality to the VitalSign in order to allow easy
     search for weight-measurements.
     """
     def __init__(self, **kwargs):

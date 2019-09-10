@@ -1,8 +1,8 @@
-from typing import Set
-from cachetools import cached
 import json
+from typing import Any, List, Optional, Set
 
-from typing import Optional, Any, List, Dict
+from cachetools import cached
+
 
 # They can get very large (implement own version of Cachetools Cache)
 mrn_cache = {}
@@ -21,9 +21,11 @@ def _hash_request(instance: Any,
 
 class _BaseCondition:
     """
+    BaseConditions are the basic building block of FIBER's querying system.
     The _BaseCondition supplies a basic interface to combine conditional
     statements. It is the base to create custom conditions with further
-    functionality.
+    functionality and should not be used by end-users but rather by developers
+    that are extending FIBER.
     """
     OR = 'or'
     AND = 'and'
@@ -127,7 +129,7 @@ class _BaseCondition:
             }
 
     @classmethod
-    def from_dict(cls, json: Dict):
+    def from_dict(cls, json: dict):
         """
         Loads a single condition based on the json by instantiating them with
         the `attributes` defined in the json.

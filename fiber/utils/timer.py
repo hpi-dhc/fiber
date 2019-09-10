@@ -25,7 +25,8 @@ class Timer:
         """
         start the timer
 
-        :return: reference to timer-object
+        Returns:
+            reference to timer-object
         """
         self.start = time.time()
         return self
@@ -37,7 +38,8 @@ class Timer:
         Args:
             args: not used!
 
-        :return: reference to timer-object
+        Returns:
+            reference to timer-object
         """
         self.end = time.time()
         if self.name and fiber.VERBOSE:

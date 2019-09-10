@@ -1,6 +1,7 @@
 from abc import ABC
+from typing import Optional
 
-from typing import Optional, Dict
+from fiber.condition.base import _BaseCondition
 
 
 class ComparisonMixin(ABC):
@@ -28,7 +29,7 @@ class ComparisonMixin(ABC):
         return clause
 
     @classmethod
-    def from_dict(cls, json: Dict):
+    def from_dict(cls: _BaseCondition, json: dict):
         obj = super().from_dict(json)
         if 'comp_operator' in json['attributes']:
             obj._attrs['comp_operator'] = json['attributes']['comp_operator']
@@ -41,7 +42,7 @@ class ComparisonMixin(ABC):
         return super().__hash__()
 
 
-def _build_method(name):
+def _build_method(name: str):
     def operator_method(self, other):
         if 'comp_operator' in self._attrs:
             raise NotImplementedError(

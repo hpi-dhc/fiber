@@ -1,14 +1,13 @@
 import sys
 from importlib import import_module
 
-import sqlparse
 import pandas as pd
 import pyhdb
+import sqlparse
 from pyhdb.protocol.constants.general import MAX_MESSAGE_SIZE
 
-
 import fiber
-from fiber.utils import tqdm, Timer
+from fiber.utils import Timer, tqdm
 
 
 def get_engine():

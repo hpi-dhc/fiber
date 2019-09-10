@@ -1,37 +1,43 @@
 import math
 from collections import defaultdict
 from functools import reduce
-from typing import Set, List, Union, Tuple, Optional
+from typing import List, Optional, Set, Tuple, Union
 
 import pandas as pd
 
 from fiber import OCCURRENCE_INDEX
-from fiber.condition.base import _BaseCondition
 from fiber.condition import (
     _DatabaseCondition,
     LabValue,
     MRNs,
     Patient,
 )
+from fiber.condition.base import _BaseCondition
 from fiber.database.table import d_pers
+from fiber.dataframe import (
+    aggregate_df_with_windows,
+    column_threshold_clip,
+    create_id_column,
+    merge_event_dfs,
+    merge_to_base,
+    time_window_clip
+)
+from fiber.extensions import DEFAULT_PIVOT_CONFIG
 from fiber.plots.distributions import (
     bars,
     hist,
 )
 from fiber.utils import Timer
-from fiber.dataframe import (
-    time_window_clip,
-    create_id_column,
-    column_threshold_clip,
-    merge_event_dfs,
-    merge_to_base,
-    aggregate_df_with_windows
-)
-from fiber.extensions import DEFAULT_PIVOT_CONFIG
 
 
 class Cohort:
-    """ Patients that share common conditions make up a cohort.
+    """
+    A cohort is, conceptually, the basic building-block of FIBER. When querying
+    EHR-DB's one wants to define Cohorts, which are basically groups of
+    patients, identified via MRN, that have one or more conditions in common,
+    in order to run analysis on or to use these for machine learning. In order
+    to build cohorts one has to define conditions for the patients that shall
+    be part of the cohort.
 
     A Cohort can be used to fetch, pivot and postprocess data pertaining to
     all of its members.
@@ -52,7 +58,7 @@ class Cohort:
                 - self._excluded_mrns)
 
     def exclude(self, mrns: Union[Set[str], List[str]]):
-        """ Exclude specific MRNs from being part of the Cohort.
+        """Exclude specific MRNs from being part of the Cohort.
 
         Args:
             mrns: A collection of MRNs that will be excluded from the Cohort.
@@ -63,15 +69,28 @@ class Cohort:
         self._excluded_mrns = self._excluded_mrns | set(mrns)
         return self
 
-    def _pivot_all_for(
+    def pivot_all_for(
         self,
-        condition,
+        condition: _BaseCondition,
         pivot_table_kwargs: dict,
-        threshold: float = 0.5,
-        window: Tuple[float] = (-math.inf, math.inf),
-        flatten_columns: bool = True
-    ):
+        threshold: Optional[float] = 0.5,
+        window: Optional[Tuple[int]] = (-math.inf, math.inf),
+        flatten_columns: Optional[bool] = True
+    ) -> pd.DataFrame:
+        """Fetches data, aggregates and pivots while time clipping.
 
+        Fetches data for conditions within time windows. Pivots the fetched
+        data based on the provided aggregation functions and removes columns
+        that are filled below a threshold.
+        Additionally applies column renaming magic ✨.
+
+        Args:
+            condition: any condition can be used here
+            pivot_table_kwargs: args that should be passed to pd.pivot_table
+            threshold: columns must be filled above this threshold
+            window: relevant time-window (inclusive interval)
+            flatten_columns: should column names be flattened from tuples
+        """
         df = self.values_for(condition)
 
         with Timer('Time clipping'):
@@ -114,11 +133,22 @@ class Cohort:
 
     def get_pivoted_features(
         self,
-        pivot_config=DEFAULT_PIVOT_CONFIG,
+        pivot_config: Optional[dict] = DEFAULT_PIVOT_CONFIG,
     ):
+        """Gets all data as specified in the DEFAULT_PIVOT_CONFIG.
+
+        This enables unsupervised machine learning and removes the need
+        to specify sophisticated conditions. It can also help to see which
+        data are present in the database.
+
+        Args:
+            pivot_config: Mapping of conditions to arguments for
+                :meth:`fiber.cohort.Cohort.pivot_all_for`
+
+        """
         results = [
-            self._pivot_all_for(cond, **kwargs)
-            for (cond, kwargs) in pivot_config.items()
+            self.pivot_all_for(cond, **pivot_table_kwargs)
+            for (cond, pivot_table_kwargs) in pivot_config.items()
         ]
 
         with Timer('Merge'):
@@ -166,16 +196,16 @@ class Cohort:
 
     def get_occurrences(
         self,
-        condition,
+        condition: _BaseCondition,
     ):
-        """
-        receive the occurrences of the specified condition for this cohort
+        """Receive the occurrences of the specified condition for this cohort.
 
         Args:
             condition: condition to search for occurrences in data regarding
                 this cohort
 
-        :return: df containing the occurrences for the specified cohort with
+        Returns:
+            df containing the occurrences for the specified cohort with
             respective age_in_days-entries.
         """
         # (TODO) Check if selection of distinct timestamp can be moved to db
@@ -185,7 +215,9 @@ class Cohort:
 
     def _validate_and_get_event_df(
         self,
-        relative_to=None, before=None, after=None,
+        relative_to: Optional[_BaseCondition] = None,
+        before: Optional[_BaseCondition] = None,
+        after: Optional[_BaseCondition] = None
     ):
         """
         functionality to check if only one of relative_to, before or after is
@@ -198,7 +230,8 @@ class Cohort:
             before: condition describing data-points per MRNs
             after: condition describing data-points per MRNs
 
-        :return: occurrences of this cohort on basis of the specified
+        Returns:
+            occurrences of this cohort on basis of the specified
             [relative_to, before, after] from self.get_occurrences
         """
         arg_count = sum([bool(relative_to), bool(before), bool(after)])
@@ -214,10 +247,10 @@ class Cohort:
 
     def occurs(
         self,
-        target,
-        relative_to=None,
-        before=None,
-        after=None
+        target: _BaseCondition,
+        relative_to: Optional[_BaseCondition] = None,
+        before: Optional[_BaseCondition] = None,
+        after: Optional[_BaseCondition] = None
     ):
         """
         functionality to receive data points, but not the values, for this
@@ -229,7 +262,8 @@ class Cohort:
             before: condition describing data-points per MRNs
             after: condition describing data-points per MRNs
 
-        :return: df with mrn and age_in_days for the respective condition
+        Returns:
+            df with mrn and age_in_days for the respective condition
         """
         event_df = self._validate_and_get_event_df(
             relative_to, before, after)
@@ -246,10 +280,10 @@ class Cohort:
 
     def values_for(
         self,
-        target,
-        relative_to=None,
-        before=None,
-        after=None
+        target: _BaseCondition,
+        relative_to: Optional[_BaseCondition] = None,
+        before: Optional[_BaseCondition] = None,
+        after: Optional[_BaseCondition] = None
     ):
         """
         functionality to receive data points, including the values, for this
@@ -261,7 +295,8 @@ class Cohort:
             before: condition describing data-points per MRNs
             after: condition describing data-points per MRNs
 
-        :return: df with values, mrn, age_in_days for the respective condition
+        Returns:
+            df with values, mrn, age_in_days for the respective condition
         """
         event_df = self._validate_and_get_event_df(
             relative_to, before, after)
@@ -276,7 +311,7 @@ class Cohort:
 
     def aggregate_values_in(
         self,
-        time_windows,
+        time_windows: List[Tuple[int]],
         df,
         aggregation_functions,
         name: str = 'interval',
@@ -292,7 +327,8 @@ class Cohort:
                 pivoting
             name: the name to pivot data towards
 
-        :return: the pivoted, aggregated, prefixed and time-clipped df
+        Returns:
+            the pivoted, aggregated, prefixed and time-clipped df
         """
         results = aggregate_df_with_windows(
             time_windows,
@@ -307,7 +343,7 @@ class Cohort:
 
     def has_occurrence_in(
         self,
-        time_windows,
+        time_windows: List[Tuple[int]],
         df,
         name: str = 'interval',
     ):
@@ -325,9 +361,9 @@ class Cohort:
 
     def has_onset(
         self,
-        name,
-        condition,
-        time_windows=None,
+        name: str,
+        condition: _BaseCondition,
+        time_windows: Optional[List[Tuple[int]]] = None,
     ):
         """
         functionality to check whether the elements of the cohort have an onset
@@ -340,7 +376,8 @@ class Cohort:
             condition: the condition to check for
             time_windows: the time_windows for which the data should tested
 
-        :return: df containing the onset in the relative time-window
+        Returns:
+            df containing the onset in the relative time-window
         """
         co_occurrence = self.occurs(condition)
         time_windows = time_windows or ((0, 1), (0, 7), (0, 14), (0, 28))
@@ -352,9 +389,9 @@ class Cohort:
 
     def has_precondition(
         self,
-        name,
-        condition,
-        time_windows=None,
+        name: str,
+        condition: _BaseCondition,
+        time_windows: Optional[List[Tuple[int]]] = None,
     ):
         """
         functionality to check if the elements of the cohort have a
@@ -365,7 +402,8 @@ class Cohort:
             condition: condition-element to check for
             time_windows: the time_windows the data should be trimmed to
 
-        :return: df containing bool entries for the precondition per mrn
+        Returns:
+            df containing bool entries for the precondition per mrn
         """
         co_occurrence = self.occurs(condition)
         time_windows = time_windows or ((-math.inf, 0), )
@@ -383,7 +421,8 @@ class Cohort:
         Args:
             dataframes: data to merge the patients data with
 
-        :return: data merged in one single df
+        Returns:
+            data merged in one single df
         """
         base = self.get_occurrences(self.condition).merge(
             self.get(Patient()), on=['medical_record_number']
@@ -424,9 +463,9 @@ class Cohort:
         }
 
     def __len__(self):
-        """ :return: amount of MRNs in this cohort """
+        """Amount of MRNs in this cohort """
         return len(self.condition)
 
     def __iter__(self):
-        """ :return: iterator object on basis of the MRNs of this cohort """
+        """Iterator object on basis of the MRNs of this cohort """
         return iter(self.mrns())

@@ -1,13 +1,13 @@
 from functools import reduce
 from itertools import chain
-from typing import Set
+from typing import Optional, Set
 
 import pandas as pd
 from sqlalchemy import (
     func,
+    or_,
     orm,
     sql,
-    or_,
 )
 
 import fiber
@@ -20,11 +20,11 @@ from fiber.database import get_engine
 from fiber.database.table import Table
 
 
-def _case_insensitive_like(column, value):
+def _case_insensitive_like(column: str, value):
     return func.upper(column).like(value.upper())
 
 
-def _multi_like_clause(column, value_or_values):
+def _multi_like_clause(column: str, value_or_values):
     values = (
         [value_or_values]
         if isinstance(value_or_values, str)
@@ -41,7 +41,9 @@ class _DatabaseCondition(_BaseCondition):
     """
     The DatabaseCondition adds functionality to the BaseCondition which
     is needed to run queries against a database. It also allows to combine
-    SQL Statements into one to optimize performance.
+    SQL Statements into one to optimize performance. It should only be used by
+    developers and not by end-users. It builds the basis for specific
+    conditions like Diagnosis, VitalSign, ...
 
     It should be possible to use this for other databases that use MRNs by
     adjusting the engine. Problems one would need to look into is that database
@@ -53,8 +55,8 @@ class _DatabaseCondition(_BaseCondition):
 
     def __init__(
         self,
-        mrns: Set[str] = None,
-        dimensions: Set[str] = None,
+        mrns: Optional[Set[str]] = None,
+        dimensions: Optional[Set[str]] = None,
         clause=None,
         data_columns=None,
         **kwargs
@@ -163,7 +165,8 @@ class _DatabaseCondition(_BaseCondition):
         """
         raise NotImplementedError
 
-    def _fetch_mrns(self, limit=None):
+    def _fetch_mrns(self,
+                    limit: Optional[int] = None):
         """Fetches MRNs from the results of ``._create_query()``."""
         q = self._create_query()
         if limit:
@@ -179,7 +182,9 @@ class _DatabaseCondition(_BaseCondition):
         )
         return result
 
-    def _fetch_data(self, included_mrns=None, limit=None):
+    def _fetch_data(self,
+                    included_mrns: Optional[Set] = None,
+                    limit: Optional[int] = None):
         """
         Fetches the data defined with ``.data_columns`` for each patient
         defined by this condition and via ``included_mrns`` from the results of
@@ -205,13 +210,13 @@ class _DatabaseCondition(_BaseCondition):
         """
         return self.get_data(limit=10)
 
-    def values_per(self, *columns):
+    def values_per(self, *columns: Set[str]):
         """
         Counts occurence of unique values in the specified columns.
         """
         return self._grouped_count('*', *columns, label='values')
 
-    def patients_per(self, *columns):
+    def patients_per(self, *columns: Set[str]):
         """
         Counts distinct patients for unique values in the specified columns.
         """
@@ -221,7 +226,10 @@ class _DatabaseCondition(_BaseCondition):
             label='patients'
         )
 
-    def _grouped_count(self, count_column, *columns, label=None):
+    def _grouped_count(self,
+                       count_column: str,
+                       *columns: Set[str],
+                       label: Optional[str] = None):
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
 
@@ -236,7 +244,7 @@ class _DatabaseCondition(_BaseCondition):
 
         return read_with_progress(q.statement, self.engine)
 
-    def distinct(self, *columns):
+    def distinct(self, *columns: Set[str]):
         """Returns distinct values based on the specified ``columns``"""
         if not columns:
             raise ValueError('Supply one or multiple columns as arguments.')
@@ -254,13 +262,13 @@ class _DatabaseCondition(_BaseCondition):
         return obj_dict
 
     @classmethod
-    def from_dict(cls, obj_dict):
+    def from_dict(cls: _BaseCondition, obj_dict: dict):
         obj = super().from_dict(obj_dict)
         if 'data_columns' in obj_dict:
             obj.data_columns = obj_dict['data_columns']
         return obj
 
-    def __or__(self, other):
+    def __or__(self, other: _BaseCondition):
         """
         The _DatabaseCondition optimizes the SQL statements for ``|`` by
         combining the clauses of condition which run on the same database
@@ -288,7 +296,7 @@ class _DatabaseCondition(_BaseCondition):
                 operator=_BaseCondition.OR,
             )
 
-    def __and__(self, other):
+    def __and__(self, other: _BaseCondition):
         # The SQL queries could theoretically be combined for AND as well, by
         # running them as subqueries and joining on the MRNs
         return self.__class__(

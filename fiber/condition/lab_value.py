@@ -1,17 +1,23 @@
+from typing import Optional, Set
+
 import pandas as pd
 from sqlalchemy import orm
 
-from fiber.database.table import epic_lab
 from fiber.condition import _DatabaseCondition
+from fiber.condition.database import _case_insensitive_like
 from fiber.condition.mixins import (
     AgeMixin,
     ComparisonMixin,
 )
-from fiber.condition.database import _case_insensitive_like
+from fiber.database.table import epic_lab
 
 
 class LabValue(AgeMixin, ComparisonMixin, _DatabaseCondition):
     """
+    LabValues are part of the building-blocks of FIBER. In order to define
+    Cohorts, LabValues are basically the access-point to the results received
+    from Labs when one had to perform tests outside of the hospital.
+
     LabValue is based of Database condition and accesses the EPIC_LAB table it
     contains information about laboratory test which are done for instance on
     blood values.
@@ -72,7 +78,9 @@ class LabValue(AgeMixin, ComparisonMixin, _DatabaseCondition):
             self.mrn_column
         ).distinct()
 
-    def _fetch_data(self, included_mrns=None, limit=None):
+    def _fetch_data(self,
+                    included_mrns: Optional[Set] = None,
+                    limit: Optional[int] = None):
         """
         LabValue overwrites ``._fetch_data()`` to simplify the result data.
         """
