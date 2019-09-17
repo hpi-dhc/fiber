@@ -11,6 +11,7 @@ coverage==4.5.1
 Sphinx==2.1.2
 sphinx-autobuild==0.7.1
 sphinx-autodoc-typehints==1.7.0
+sphinxcontrib-fulltoc==1.2.0
 sphinx_rtd_theme==0.4.3
 m2r==0.2.1
 twine==1.12.1
