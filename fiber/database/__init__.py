@@ -11,11 +11,11 @@ from fiber.utils import Timer, tqdm
 
 
 def get_engine():
-    return getattr(import_module(f'fiber.database.{fiber.MSDW_DB}'), 'engine')
+    return getattr(import_module(f'fiber.database.{fiber.DB_TYPE}'), 'engine')
 
 
 def get_meta():
-    return getattr(import_module(f'fiber.database.{fiber.MSDW_DB}'), 'meta')
+    return getattr(import_module(f'fiber.database.{fiber.DB_TYPE}'), 'meta')
 
 
 # DO NOT INCREASE THE CHUNK SIZE BEYOND THIS SIZE

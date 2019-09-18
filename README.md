@@ -26,6 +26,10 @@ For a quick start, checkout [this iPython notebook](/notebooks/heart-surgery-dem
 
 For a more details have a look at the [documentation](/docs/readme.md).
 
+## Configuration of the database connection
+
+Check out `.env-example` to setup the HANA or MySQL connection.
+
 ## Features
 
 ### Cohort
@@ -59,5 +63,6 @@ Wrappers around `has_co_occurrence` for frequently used
 
 * Retrieve lists of codes for ICD-10, ICD-9 and other schemes. Can be used for example for diagnosis, procedures or vital signs.
     ```python
-    YAMLStore.get_condition(Procedure, 'heart surgery', ['ICD-10', 'ICD-9'])
+    import fiber.storage.yaml as fiber_yaml
+    fiber_yaml.get_condition(Procedure, 'heart surgery', ['ICD-10', 'ICD-9'])
     ```

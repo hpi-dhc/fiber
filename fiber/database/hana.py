@@ -1,6 +1,5 @@
 import os
 from contextlib import contextmanager
-from getpass import getpass
 
 from sqlalchemy import (
     create_engine,
@@ -8,13 +7,18 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker
 
-from fiber import CACHE_PATH
+from fiber import (
+    CACHE_PATH,
+    DB_USER,
+    DB_PASSWD,
+    DB_HOST,
+    DB_PORT,
+    DB_SCHEMA
+)
 from fiber.database.meta import add_tables
 
-
-PASSWD = os.getenv('FIBER_HANA_PASSWORD') or getpass('HANA Password: ')
 # (TODO) use tunnel https://pypi.org/project/sshtunnel/
-DATABASE_URI = ***REMOVED***
+DATABASE_URI = f'hana+pyhdb://{DB_USER}:{DB_PASSWD}@{DB_HOST}:{DB_PORT}/'
 
 engine = create_engine(DATABASE_URI)
 
@@ -38,4 +42,4 @@ def session_scope():
         session.close()
 
 
-meta = add_tables(MetaData(bind=engine, schema='MSDW_2018'))
+meta = add_tables(MetaData(bind=engine, schema=DB_SCHEMA))
