@@ -19,7 +19,7 @@ VERBOSE = (
     or False
 )
 
-DB_TYPE = os.getenv('FIBER_DB_TYPE') or 'hana'
+DB_TYPE = os.getenv('FIBER_DB_TYPE') or input('DB Type (hana, mysql, test): ')
 if not DB_TYPE == 'test':
     DB_USER = os.getenv('FIBER_DB_USER') or input('DB User: ')
     DB_PASSWD = os.getenv('FIBER_DB_PASSWORD') or getpass('DB Password: ')
@@ -28,3 +28,10 @@ if not DB_TYPE == 'test':
     DB_SCHEMA = os.getenv('FIBER_DB_SCHEMA') or input('DB Schema: ')
 
 OCCURRENCE_INDEX = ['medical_record_number', 'age_in_days']
+
+# Import
+from .cohort import Cohort # noqa
+
+__all__ = [
+    'Cohort'
+]
