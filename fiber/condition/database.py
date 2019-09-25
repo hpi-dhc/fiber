@@ -80,7 +80,6 @@ class _DatabaseCondition(_BaseCondition):
         # sql.true() acts as an 'empty' initializer for the clause
         self._clause = sql.true() if clause is None else clause
         self.data_columns = data_columns or []
-        self._data_cache = {}
 
     @property
     def base_table(self) -> Table:
