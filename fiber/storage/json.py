@@ -74,7 +74,7 @@ def dump(file_pointer: StringIO, condition: _BaseCondition):
     Returns:
         Return a JSON string representation of a Python data structure.
     """
-    return json.dump(file_pointer, condition.to_dict)
+    return json.dump(condition.to_dict(), file_pointer)
 
 
 def load(file_pointer: StringIO):
