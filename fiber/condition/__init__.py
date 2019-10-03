@@ -1,19 +1,16 @@
-from .database import DatabaseCondition
-from .fact import (
-    Diagnosis,
-    Drug,
-    Material,
-    Procedure,
-    VitalSign,
-)
+from . import fact
+from .base import _BaseCondition
+from .database import _DatabaseCondition
+from .fact import *  # noqa
+from .lab_value import LabValue
+from .mrns import MRNs
 from .patient import Patient
 
 __all__ = [
-    'DatabaseCondition',
-    'Diagnosis',
-    'Material',
+    '_BaseCondition',
+    '_DatabaseCondition',
     'Patient',
-    'Procedure',
-    'VitalSign',
-    'Drug',
+    'LabValue',
+    'MRNs',
 ]
+__all__.extend(fact.__all__)

@@ -1,45 +1,50 @@
 from sqlalchemy.sql.schema import Table as SQLATable
 
-from fiber.database.hana import get_meta
-
-META = get_meta()
-
-
-# class Table:
-
-#     meta = META
-
-#     def __init__(self, name):
-#         self._table = self.meta.tables[f'MSDW_2018.{name.lower()}']
-#         self._name = name
-
-#     def __getattr__(self, attr):
-#         attr = attr.lower()
-
-#         if attr in self._table.columns:
-#             return self._table.columns[attr]
-#         else:
-#             raise AttributeError(f"Table {self._name} has no column {attr}")
+from fiber.database import get_meta
 
 
 class Table(SQLATable):
+    """
+    This class extends the SQLAlchemy table by functionality to provide
+    information about attributes and create a new instance of tables. It is
+    used by developers of the FIBER-framework in order to connect the framework
+    to the database and make a convenient entry-point for this when developing
+    basic building blocks of FIBER, like the _BaseCondition.
+    """
 
-    def __getattr__(self, attr):
-        attr = attr.lower()
+    def __getattr__(self, attr: str):
+        """
+        receive the column of the db table
+        Args:
+            attr: name of the column as stored in db
+        Returns:
+            the column with the name specified
+        """
+        attr = attr.upper()
 
         if attr in self.columns:
             return self.columns[attr]
         else:
             raise AttributeError(f"Table {self.name} has no column {attr}")
 
-    def __new__(cls, name):
-        table = META.tables[f'MSDW_2018.{name.lower()}']
+    def __new__(cls, name: str):
+        """
+        receive a new table as specified
+        Args:
+            name: name of the table to receive
+        Returns:
+            table reference as specified from the parameter
+        """
+        meta = get_meta()
+        cls.META = meta
+        name = f'{meta.schema}.{name}' if meta.schema else name
+        table = cls.META.tables[f'{name}']
         table.__class__ = cls
 
         return table
 
 
-fact = Table('FACT2')
+fact = Table('FACT')
 
 b_proc = Table('B_PROCEDURE')
 fd_proc = Table('FD_PROCEDURE')
@@ -52,41 +57,12 @@ fd_mat = Table('FD_MATERIAL')
 
 d_pers = Table('D_PERSON')
 d_enc = Table('D_ENCOUNTER')
+d_uom = Table('D_UNIT_OF_MEASURE')
 
-dimensions = {
-    'PROCEDURE': (fd_proc, b_proc),
-    'MATERIAL': (fd_mat, b_mat),
-    'DIAGNOSIS': (fd_diag, b_diag),
-    'ENCOUNTER': (d_enc, None),
-}
+d_meta = Table('D_METADATA')
+d_meta.LEVEL1 = d_meta.LEVEL1_CONTEXT_NAME
+d_meta.LEVEL2 = d_meta.LEVEL2_EVENT_NAME
+d_meta.LEVEL3 = d_meta.LEVEL3_ACTION_NAME
+d_meta.LEVEL4 = d_meta.LEVEL4_FIELD_NAME
 
-
-# (TODO) Move to FactConditionand and refactor
-def join_dimension(query, dim):
-    assert dim in dimensions
-    d_table, b_table = dimensions[dim]
-    key = f'{dim}_key'
-
-    if b_table is None:
-        return query.join(
-            d_table,
-            getattr(d_table, key) == getattr(b_table, key)
-        )
-    else:
-        group_key = f'{dim}_group_key'
-
-        return query.join(
-            b_table,
-            getattr(fact, group_key) == getattr(b_table, group_key)
-        ).join(
-            d_table,
-            getattr(d_table, key) == getattr(b_table, key)
-        )
-
-
-def filter_by(query, condition):
-    query = query.filter(condition.clause)
-
-    for dimension in condition.dimensions:
-        query = join_dimension(query, dimension)
-    return query
+epic_lab = Table('EPIC_LAB')

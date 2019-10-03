@@ -1,3 +1,7 @@
+IMAGE_NAME = hpi-dhc/fiber
+IMAGE_VERSION = 1.0.0
+CONTAINER_PORT = 18888
+
 .PHONY: clean clean-test clean-pyc clean-build docs help
 .DEFAULT_GOAL := help
 
@@ -86,3 +90,15 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+build-docker-fiber:
+	docker build . --target=fiber -t $(IMAGE_NAME):$(IMAGE_VERSION)
+
+build-docker-jupyter:
+	docker build . -t $(IMAGE_NAME)-jupyter:$(IMAGE_VERSION)
+
+docker-shell:
+	docker run -it $(IMAGE_NAME):$(IMAGE_VERSION) bash
+
+docker-jupyter:
+	docker run -p $(CONTAINER_PORT):8888 $(IMAGE_NAME)-jupyter:$(IMAGE_VERSION)

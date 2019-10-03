@@ -3,7 +3,7 @@
 
 'The setup script.'
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open('README.md') as readme_file:
     readme = readme_file.read()
@@ -11,7 +11,8 @@ with open('README.md') as readme_file:
 with open('HISTORY.md') as history_file:
     history = history_file.read()
 
-requirements = []
+with open('requirements.txt') as requirements_file:
+    requirements = requirements_file.read().split('\n')
 
 setup_requirements = ['pytest-runner', ]
 
@@ -43,6 +44,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.hpi.de/fiber/fiber',
-    version='0.1.0',
+    version='1.0.0',
     zip_safe=False,
 )
