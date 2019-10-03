@@ -2,7 +2,7 @@ import os
 from getpass import getpass
 
 __author__ = 'Tom Martensen, Philipp Bode, Christoph Anders, Jonas Kopka'
-__version__ = '0.1.1'
+__version__ = '1.0.0'
 
 CACHE_PATH = os.path.join(os.path.dirname(__file__), '.cache')
 DEFAULT_STORE_FILE_PATH = os.path.join(

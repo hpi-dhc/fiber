@@ -44,6 +44,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.hpi.de/fiber/fiber',
-    version='0.1.0',
+    version='1.0.0',
     zip_safe=False,
 )
