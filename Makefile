@@ -1,5 +1,5 @@
 IMAGE_NAME = hpi-dhc/fiber
-IMAGE_VERSION = 1.0.0
+IMAGE_VERSION = 1.0.1
 CONTAINER_PORT = 18888
 
 .PHONY: clean clean-test clean-pyc clean-build docs help
