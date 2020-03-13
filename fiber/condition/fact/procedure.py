@@ -26,13 +26,14 @@ class Procedure(_FactCondition):
     dimensions = {'PROCEDURE'}
     d_table = fd_proc
     code_column = fd_proc.CONTEXT_PROCEDURE_CODE
+    context_column = d_table.CONTEXT_NAME
     category_column = fd_proc.PROCEDURE_TYPE
     description_column = fd_proc.PROCEDURE_DESCRIPTION
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
-        d_table.CONTEXT_NAME,
+        context_column,
         code_column
     ]
 

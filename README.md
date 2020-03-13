@@ -1,12 +1,9 @@
 # FIBER
-![Pipeline status](https://gitlab.hpi.de/fiber/fiber/badges/master/pipeline.svg)
-![Coverage](https://gitlab.hpi.de/fiber/fiber/badges/master/coverage.svg)
 
 The fiber package.
 
 
 * Free software: MIT license
-* Documentation: https://fiber.readthedocs.io.
 
 ## Installation
 
@@ -21,10 +18,6 @@ pip install -e .
 ## Quickstart
 
 For a quick start, checkout [this iPython notebook](/notebooks/heart-surgery-demo.ipynb). We demonstrate the most important [Features](#features) in there.
-
-## Documentation
-
-For a more details have a look at the [documentation](/docs/readme.md).
 
 ## Configuration of the database connection
 

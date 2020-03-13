@@ -39,11 +39,11 @@ setup(
     include_package_data=True,
     keywords='fiber',
     name='fiber',
-    packages=find_packages(include=['fiber']),
+    packages=find_packages(include=['fiber', 'fiber.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.hpi.de/fiber/fiber',
-    version='1.0.0',
+    version='2.0.0',
     zip_safe=False,
 )

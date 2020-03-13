@@ -1,4 +1,3 @@
-import os
 from contextlib import contextmanager
 
 from sqlalchemy import (
@@ -7,13 +6,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker
 
-from fiber import (
-    CACHE_PATH,
-    DB_USER,
-    DB_PASSWD,
+from fiber.config import (
     DB_HOST,
+    DB_PASSWD,
     DB_PORT,
-    DB_SCHEMA
+    DB_SCHEMA,
+    DB_USER
 )
 from fiber.database.meta import add_tables
 
@@ -24,8 +22,6 @@ engine = create_engine(DATABASE_URI)
 
 Session = sessionmaker(bind=engine)
 session = Session()
-
-cache_file = os.path.join(CACHE_PATH, 'metadata.pkl')
 
 
 @contextmanager

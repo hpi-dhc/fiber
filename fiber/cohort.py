@@ -1,19 +1,20 @@
+import json
 import math
+import time
 from collections import defaultdict
 from functools import reduce
 from typing import List, Optional, Set, Tuple, Union
 
 import pandas as pd
 
-from fiber import OCCURRENCE_INDEX
+import fiber
 from fiber.condition import (
     _DatabaseCondition,
-    LabValue,
     MRNs,
     Patient,
 )
 from fiber.condition.base import _BaseCondition
-from fiber.database.table import d_pers
+from fiber.config import OCCURRENCE_INDEX
 from fiber.dataframe import (
     aggregate_df_with_windows,
     column_threshold_clip,
@@ -27,6 +28,7 @@ from fiber.plots.distributions import (
     bars,
     hist,
 )
+from fiber.storage.json import dict_to_condition
 from fiber.utils import Timer
 
 
@@ -47,15 +49,41 @@ class Cohort:
         limit: The maximum number of Patients that the Cohort should hold.
     """
 
-    def __init__(self, condition: _BaseCondition, limit: Optional[int] = None):
+    def __init__(
+        self,
+        condition: _BaseCondition,
+        limit: Optional[int] = None,
+        excluded_mrns: Optional[set] = set(),
+        comment: Optional[str] = '',
+        version: Optional[str] = '1',
+        createdAt: Optional[float] = time.time(),
+        fiberVersion: Optional[str] = None
+    ):
         self.condition = condition
-        self._excluded_mrns = set()
+        self._excluded_mrns = set(excluded_mrns)
         self._mrn_limit = limit
+        self._occurrences = None
+        self._mrns = None
+        self.comment = comment
+        self.version = version
+        self.created_at = createdAt
+        self.fiber_version = fiberVersion or fiber.__version__
 
+    @property
     def mrns(self) -> Set[str]:
         """Get the MRN of each individual Cohort member."""
-        return (self.condition.get_mrns(limit=self._mrn_limit)
-                - self._excluded_mrns)
+        if self._mrns is None:
+            self._mrns = self.condition.get_mrns(
+                limit=self._mrn_limit
+            ) - self._excluded_mrns
+        return self._mrns
+
+    @property
+    def occurrences(self) -> pd.DataFrame:
+        """Get a dataframe of all cohort condition occurrences."""
+        if self._occurrences is None:
+            self._occurrences = self.get_occurrences(self.condition)
+        return self._occurrences
 
     def exclude(self, mrns: Union[Set[str], List[str]]):
         """Exclude specific MRNs from being part of the Cohort.
@@ -67,6 +95,7 @@ class Cohort:
             mrns = list(mrns)
         mrns = set(map(str, mrns))
         self._excluded_mrns = self._excluded_mrns | set(mrns)
+        self._mrns = None
         return self
 
     def pivot_all_for(
@@ -100,13 +129,7 @@ class Cohort:
             df.set_index(OCCURRENCE_INDEX, inplace=True)
 
         with Timer('Creating id columns'):
-            if not isinstance(condition, LabValue):
-                create_id_column(condition, df)
-            else:
-                df['test_name'].cat.categories = [
-                    f'{LabValue.__name__}__{g}'
-                    for g in df['test_name'].cat.categories
-                ]
+            create_id_column(condition, df)
 
         with Timer('Pivoting'):
             df = pd.pivot_table(
@@ -191,7 +214,7 @@ class Cohort:
             c = reduce(_DatabaseCondition.__or__, c)
 
             print(f'Fetching data for {c}')
-            data.append(c.get_data(self.mrns(), limit=limit))
+            data.append(c.get_data(self.mrns, limit=limit))
         return data if len(data) > 1 else data[0]
 
     def get_occurrences(
@@ -236,7 +259,7 @@ class Cohort:
         """
         arg_count = sum([bool(relative_to), bool(before), bool(after)])
         if arg_count == 0:
-            return self.get_occurrences(self.condition)
+            return self.occurrences
         elif arg_count == 1:
             return self.get_occurrences(relative_to or before or after)
         else:
@@ -338,8 +361,7 @@ class Cohort:
         )
 
         # merge with all occurrences of the cohort condition again
-        base = self.get_occurrences(self.condition)
-        return merge_to_base(base, results)
+        return merge_to_base(self.occurrences, results)
 
     def has_occurrence_in(
         self,
@@ -350,14 +372,14 @@ class Cohort:
         results = aggregate_df_with_windows(
             time_windows,
             df,
-            aggregation_functions={'time_delta_in_days': 'any'},
+            aggregation_functions={
+                'time_delta_in_days': lambda x: bool(len(x))
+            },
             name=name,
             prefix_column_names=False,
         )
 
-        # merge with all occurrences of the cohort condition again
-        base = self.get_occurrences(self.condition)
-        return merge_to_base(base, results).fillna(value=False)
+        return merge_to_base(self.occurrences, results).fillna(value=False)
 
     def has_onset(
         self,
@@ -413,6 +435,44 @@ class Cohort:
             name=f'{name}_precondition',
         )
 
+    def time_series_for(
+        self,
+        target: _BaseCondition,
+        relative_to: Optional[_BaseCondition] = None,
+        before: Optional[_BaseCondition] = None,
+        after: Optional[_BaseCondition] = None,
+        aggregate_value_per_day_func=None,
+    ):
+        """Extracts time series values for conditions with numeric values."""
+        assert len(
+            [True for s in target.data_columns if 'numeric_value' in s.lower()]
+        )
+        df = self.values_for(
+            target, relative_to=relative_to, before=before, after=after
+        )
+        if aggregate_value_per_day_func:
+            description_column = target.description_column.name.lower()
+            if description_column in df.columns:
+                grouper = [description_column]
+            else:
+                grouper = [
+                    target.code_column.name.lower(),
+                    target.context_column.name.lower()
+                ]
+            df = df.groupby([
+                'medical_record_number',
+                'age_in_days',
+                'time_delta_in_days',
+                *grouper
+            ]).agg({
+                'numeric_value': aggregate_value_per_day_func
+            }).reset_index()
+        df.sort_values(
+            by=['medical_record_number', 'age_in_days', 'time_delta_in_days'],
+            inplace=True,
+        )
+        return df
+
     def merge_patient_data(self, *dataframes):
         """
         functionality to merge the data specified in the df's on the patients
@@ -424,7 +484,7 @@ class Cohort:
         Returns:
             data merged in one single df
         """
-        base = self.get_occurrences(self.condition).merge(
+        base = self.occurrences.merge(
             self.get(Patient()), on=['medical_record_number']
         )
         return merge_to_base(base, dataframes)
@@ -435,31 +495,62 @@ class Cohort:
         Generates basic cohort demographics for patients' age and
         gender distribution, including plots.
         """
-        condition_events = self.get_occurrences(self.condition)
+        condition_events = self.occurrences
         s_age = condition_events[
             condition_events.age_in_days < 50000
         ].groupby(
-            ['medical_record_number']
-        ).age_in_days.mean().apply(lambda x: x / 365)
-        s_age.rename('age', inplace=True)
-        print('[INFO] Age demographics exclude patients with anonymized age.')
+            'medical_record_number'
+        ).age_in_days.mean().apply(lambda x: x / 365).rename('age')
+        age_categorization = {
+            "minors": sum(s_age < 18) / len(s_age),
+            "adults": sum(s_age >= 18) / len(self),
+            "adults (anon. age)": (len(self) - sum(s_age >= 18)) / len(self)
+        }
+        print('''
+            [INFO] Age figure and mean exclude patients with anonymized age.
+        ''')
 
-        s_gender = self.get(
-            Patient(data_columns=[d_pers.MEDICAL_RECORD_NUMBER, d_pers.GENDER])
-        ).gender
+        patients_df = self.get(Patient(map_values=True))
+        gender_counts = patients_df.gender.value_counts()
 
-        gender_counts = s_gender.value_counts()
         return {
+            'raw': {
+                'age': s_age,
+                'gender': patients_df.gender,
+                'race': patients_df.race,
+                'deceased': patients_df.deceased_indicator.rename('deceased')
+            },
             'age': {
                 'mean': s_age.mean(),
                 'std': s_age.std(),
-                'figure': hist(s_age)
+                'figure': hist(s_age),
+                'distribution': age_categorization
             },
             'gender': {
                 'male': gender_counts.Male / sum(gender_counts),
                 'female': gender_counts.Female / sum(gender_counts),
-                'figure': bars(s_gender)
+                'figure': bars(patients_df.gender)
+            },
+            'race': {
+                'figure': bars(
+                    patients_df.race.str.replace('RaceType.', ''),
+                    rotate_labels_by=90
+                )
+            },
+            'mortality': {
+                'figure': bars(patients_df.deceased_indicator)
             }
+        }
+
+    @property
+    def condition_statistics(self):
+        mrns = self.occurrences.medical_record_number
+        occurrence_count = mrns.value_counts().rename('# occurrences')
+        return {
+            'raw': occurrence_count,
+            'mean_count': occurrence_count.mean(),
+            'std_count': occurrence_count.std(),
+            'figure': bars(occurrence_count)
         }
 
     def __len__(self):
@@ -468,4 +559,31 @@ class Cohort:
 
     def __iter__(self):
         """Iterator object on basis of the MRNs of this cohort """
-        return iter(self.mrns())
+        return iter(self.mrns)
+
+    def to_json(
+        self,
+        path: str,
+        comment: Optional[str] = None,
+        version: Optional[str] = None,
+        created_at: Optional[float] = None
+    ):
+        cohort = {
+            'condition': self.condition.to_dict(),
+            'excluded_mrns': list(self._excluded_mrns),
+            'limit': self._mrn_limit,
+            'comment': comment or self.comment,
+            'version': version or self.version,
+            'createdAt': self.created_at or created_at,
+            'fiberVersion': self.fiber_version
+        }
+        with open(path, 'w') as fp:
+            json.dump(cohort, fp)
+        return cohort
+
+    @classmethod
+    def from_json(cls, path: str):
+        with open(path, 'r') as fp:
+            cohort_dict = json.load(fp)
+        cohort_dict['condition'] = dict_to_condition(cohort_dict['condition'])
+        return cls(**cohort_dict)

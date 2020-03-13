@@ -1,4 +1,9 @@
-from typing import Optional, Set
+from enum import Enum
+from functools import reduce
+from typing import Optional, Set, Union
+
+import pandas as pd
+from sqlalchemy import or_
 
 from fiber.condition.database import _case_insensitive_like
 from fiber.condition.fact.fact import _FactCondition
@@ -35,35 +40,35 @@ class MetaData(_FactCondition):
         fact.VALUE,
     ]
 
-    def __init__(self, description: Optional[str] = '', **kwargs):
+    def __init__(self, name: Optional[str] = '', **kwargs):
         """
         Args:
-            description: the description to query for, where either LEVEL1,
+            name: the name to query for, where either LEVEL1,
                 LEVEL2, LEVEL3 or LEVEL4 of the metadata are case-insensitive
                 like the parameter provided
             kwargs: the keyword-arguments to pass higher in the hierarchy
         """
-        if description:
-            kwargs['description'] = description
         super().__init__(**kwargs)
+        if name:
+            self._attrs['name'] = name
 
     def _create_clause(self):
         clause = super()._create_clause()
         """
         Used to create a SQLAlchemy clause based on the Metadata-condition.
         It is used to select the correct metadata-entries based on the
-        description provided at initialization-time.
+        name provided at initialization-time.
         """
-        if self._attrs['description']:
+        if self._attrs['name']:
             clause &= (
                 _case_insensitive_like(
-                    d_meta.LEVEL1, self._attrs['description']) |
+                    d_meta.LEVEL1, self._attrs['name']) |
                 _case_insensitive_like(
-                    d_meta.LEVEL2, self._attrs['description']) |
+                    d_meta.LEVEL2, self._attrs['name']) |
                 _case_insensitive_like(
-                    d_meta.LEVEL3, self._attrs['description']) |
+                    d_meta.LEVEL3, self._attrs['name']) |
                 _case_insensitive_like(
-                    d_meta.LEVEL4, self._attrs['description'])
+                    d_meta.LEVEL4, self._attrs['name'])
             )
         return clause
 
@@ -72,14 +77,16 @@ class AlcoholUse(MetaData):
     """
     The AlcoholUse adds functionality to the Metadata-Condition. It allows to
     combine SQL Statements that shall be performed on the FACT-Table with
-    dimension 'METADATA' and description 'Alcohol use'.
+    dimension 'METADATA' and name 'Alcohol use'.
     """
+    description_column = fact.VALUE
+
     def __init__(self, **kwargs):
         """
         Args:
              kwargs: the keyword-arguments to pass higher in the hierarchy
         """
-        kwargs['description'] = 'Alcohol Use'
+        kwargs['name'] = 'Alcohol Use'
         super().__init__(**kwargs)
 
 
@@ -87,37 +94,77 @@ class TobaccoUse(MetaData):
     """
     The TobaccoUse adds functionality to the Metadata-Condition. It allows to
     combine SQL Statements that shall be performed on the FACT-Table with
-    dimension 'METADATA' and descriptions mapping to tobacco use, now or
-    sometimes in the past, with description 'Tobacco Use'.
+    dimension 'METADATA' and names mapping to tobacco use, now or
+    sometimes in the past, with name 'Tobacco Use'.
     """
+    description_column = fact.VALUE
+
+    # Inheriting from str and Enum enables json serialization
+    class Type(str, Enum):
+        YES = 'Yes'
+        NO = 'No'
+        FORMER = 'Former'
+        UNKNOWN = 'Unknown'
+        PASSIVE = 'Passive'
+
     MAPPING = {
-        'Yes': 'Yes',
-        'Current Every Day Smoker': 'Yes',
-        'Current Some Day Smoker': 'Yes',
-        'Current Everyday Smoker': 'Yes',
-        'Light Tobacco Smoker': 'Yes',
-        'Heavy Tobacco Smoker': 'Yes',
-        'Smoker, Current Status Unknown': 'Yes',
-        'Never Smoker': 'No',
-        'Never': 'No',
-        'Former Smoker': 'Former',
-        'Quit': 'Former',
-        'Never Assessed':  'Unknown',
-        'Not Asked': 'Unknown',
-        'Unknown If Ever Smoked': 'Unknown',
-        'Passive Smoke Exposure - Never Smoker': 'Passive',
-        'Passive': 'Passive',
-        'Passive Smoker': 'Passive',
+        Type.YES: [
+            'Yes',
+            'Current Every Day Smoker',
+            'Current Some Day Smoker',
+            'Current Everyday Smoker',
+            'Light Tobacco Smoker',
+            'Heavy Tobacco Smoker',
+            'Smoker, Current Status Unknown',
+        ],
+        Type.NO: [
+            'Never Smoker',
+            'Never',
+        ],
+        Type.FORMER: [
+            'Former Smoker',
+            'Quit',
+        ],
+        Type.UNKNOWN: [
+            'Never Assessed',
+            'Not Asked',
+            'Unknown If Ever Smoked',
+        ],
+        Type.PASSIVE: [
+            'Passive Smoke Exposure - Never Smoker',
+            'Passive',
+            'Passive Smoker',
+        ],
     }
 
-    def __init__(self, map_values: Optional[bool] = True, **kwargs):
+    def __init__(
+        self,
+        use: Optional[Union[str, Type]] = None,
+        map_values: Optional[bool] = True,
+        **kwargs,
+    ):
         """
-        :param map_values: whether to map the values found to the built-in map
-        :param kwargs: the keyword-arguments to pass higher in the hierarchy
+        Args:
+            use: filter criteria for specific types of use
+            map_values: whether to map the values found to the built-in map
+            kwargs: the keyword-arguments to pass higher in the hierarchy
         """
-        kwargs['description'] = 'Tobacco Use'
-        self._attrs['map_values'] = map_values
+        kwargs['name'] = 'Tobacco Use'
         super().__init__(**kwargs)
+        self._attrs['use'] = TobaccoUse.Type(use) if use else use
+        self._attrs['map_values'] = map_values
+
+    def _create_clause(self):
+        clause = super()._create_clause()
+
+        if self._attrs['use']:
+            value_clauses = [
+                fact.VALUE == label
+                for label in self.MAPPING[self._attrs['use']]
+            ]
+            clause &= reduce(or_, value_clauses)
+
+        return clause
 
     def _fetch_data(self,
                     included_mrns: Optional[Set] = None,
@@ -135,7 +182,12 @@ class TobaccoUse(MetaData):
         """
         df = super()._fetch_data(included_mrns, limit=limit)
         if self._attrs['map_values']:
-            df['value'] = df.value.map(self.MAPPING)
+            df['value'] = (
+                df.value.map({
+                    label: cat for cat, labels in self.MAPPING.items()
+                    for label in labels
+                }).astype(pd.api.types.CategoricalDtype(self.Type))
+            )
         return df
 
 
@@ -143,12 +195,14 @@ class DrugUse(MetaData):
     """
     The DrugUse adds functionality to the Metadata-Condition. It allows to
     combine SQL Statements that shall be performed on the FACT-Table with
-    dimension 'METADATA' and description 'Drug Use'.
+    dimension 'METADATA' and name 'Drug Use'.
     """
+    description_column = fact.VALUE
+
     def __init__(self, **kwargs):
         """
         Args:
             kwargs: the keyword-arguments to pass higher in the hierarchy
         """
-        kwargs['description'] = 'Drug Use'
+        kwargs['name'] = 'Drug Use'
         super().__init__(**kwargs)

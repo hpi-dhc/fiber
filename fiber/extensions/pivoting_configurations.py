@@ -9,33 +9,33 @@ from fiber.condition import (
 DEFAULT_PIVOT_CONFIG = {
     LabValue(): {
         'pivot_table_kwargs': {
-            'columns': ['test_name'],
+            'columns': ['description'],
             'aggfunc': {'numeric_value': ['min', 'median', 'max']}
         },
     },
     VitalSign(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
+            'columns': ['description'],
             'aggfunc': {'numeric_value': ['min', 'median', 'max']}
         },
     },
     Procedure(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': 'count'},
+            'columns': ['description'],
+            'aggfunc': {'description': 'count'},
         },
     },
     Drug(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': 'count'},
+            'columns': ['description'],
+            'aggfunc': {'description': 'count'},
         },
     },
     Diagnosis(): {
         'threshold': 0.1,
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': 'any'},
+            'columns': ['description'],
+            'aggfunc': {'description': 'any'},
         }
     }
 }
@@ -43,32 +43,32 @@ DEFAULT_PIVOT_CONFIG = {
 BINARY_PIVOT_CONFIG = {
     LabValue(): {
         'pivot_table_kwargs': {
-            'columns': ['test_name'],
+            'columns': ['description'],
             'aggfunc': {'numeric_value': 'any'}
         },
     },
     VitalSign(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
+            'columns': ['description'],
             'aggfunc': {'numeric_value': 'any'}
         },
     },
     Procedure(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': 'any'},
+            'columns': ['description'],
+            'aggfunc': {'description': 'any'},
         },
     },
     Drug(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': 'any'},
+            'columns': ['description'],
+            'aggfunc': {'description': 'any'},
         },
     },
     Diagnosis(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': 'any'},
+            'columns': ['description'],
+            'aggfunc': {'description': 'any'},
         }
     }
 }
@@ -76,32 +76,32 @@ BINARY_PIVOT_CONFIG = {
 COUNTED_PIVOT_CONFIG = {
     LabValue(): {
         'pivot_table_kwargs': {
-            'columns': ['test_name'],
+            'columns': ['description'],
             'aggfunc': {'numeric_value': ['count']}
         },
     },
     VitalSign(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
+            'columns': ['description'],
             'aggfunc': {'numeric_value': ['count']}
         },
     },
     Procedure(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': ['count']},
+            'columns': ['description'],
+            'aggfunc': {'description': ['count']},
         }
     },
     Drug(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': ['count']},
+            'columns': ['description'],
+            'aggfunc': {'description': ['count']},
         },
     },
     Diagnosis(): {
         'pivot_table_kwargs': {
-            'columns': ['code'],
-            'aggfunc': {'code': ['count']},
+            'columns': ['description'],
+            'aggfunc': {'description': ['count']},
         }
     }
 }

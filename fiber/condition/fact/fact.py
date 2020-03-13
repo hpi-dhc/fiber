@@ -53,6 +53,7 @@ class _FactCondition(AgeMixin, _DatabaseCondition):
         'METADATA': (d_meta, 'meta_data_key', fact, 'meta_data_key'),
     }
     mrn_column = d_pers.MEDICAL_RECORD_NUMBER
+    age_column = fact.AGE_IN_DAYS
 
     def __init__(
         self,
@@ -92,6 +93,11 @@ class _FactCondition(AgeMixin, _DatabaseCondition):
     @property
     def code_column(self):
         """This property should return the code column."""
+        raise NotImplementedError
+
+    @property
+    def context_column(self):
+        """This property should return the context column."""
         raise NotImplementedError
 
     @property
