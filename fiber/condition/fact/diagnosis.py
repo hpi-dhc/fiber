@@ -21,12 +21,13 @@ class Diagnosis(_FactCondition):
     dimensions = {'DIAGNOSIS'}
     d_table = fd_diag
     code_column = fd_diag.CONTEXT_DIAGNOSIS_CODE
+    context_column = d_table.CONTEXT_NAME
     category_column = fd_diag.DIAGNOSIS_TYPE
     description_column = fd_diag.DESCRIPTION
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
-        d_table.CONTEXT_NAME,
+        context_column,
         code_column
     ]

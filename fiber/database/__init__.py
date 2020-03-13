@@ -6,16 +6,22 @@ import pyhdb
 import sqlparse
 from pyhdb.protocol.constants.general import MAX_MESSAGE_SIZE
 
-import fiber
+from fiber import config
 from fiber.utils import Timer, tqdm
 
 
 def get_engine():
-    return getattr(import_module(f'fiber.database.{fiber.DB_TYPE}'), 'engine')
+    return getattr(
+        import_module(f'fiber.database.{config.DB_TYPE}'),
+        'engine'
+    )
 
 
 def get_meta():
-    return getattr(import_module(f'fiber.database.{fiber.DB_TYPE}'), 'meta')
+    return getattr(
+        import_module(f'fiber.database.{config.DB_TYPE}'),
+        'meta'
+    )
 
 
 # DO NOT INCREASE THE CHUNK SIZE BEYOND THIS SIZE
@@ -59,7 +65,7 @@ def read_with_progress(query_or_statement, engine, silent=False):
     ):
         raise MESSAGE_OVERFLOW_ERROR
 
-    if fiber.VERBOSE and not silent:
+    if config.VERBOSE and not silent:
         print(sqlparse.format(query_or_statement, reindent=True))
 
     with Timer('Server Execution'):

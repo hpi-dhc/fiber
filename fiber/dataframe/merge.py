@@ -3,8 +3,8 @@ from typing import List, Optional
 
 import pandas as pd
 
-from fiber import OCCURRENCE_INDEX
 from fiber.condition.base import _BaseCondition
+from fiber.config import OCCURRENCE_INDEX
 
 
 def merge_event_dfs(

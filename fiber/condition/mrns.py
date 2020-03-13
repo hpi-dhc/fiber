@@ -2,8 +2,8 @@ from typing import Iterable, Optional, Set, Union
 
 import pandas as pd
 
-from fiber import OCCURRENCE_INDEX
 from fiber.condition.base import _BaseCondition
+from fiber.config import OCCURRENCE_INDEX
 
 
 class MRNs(_BaseCondition):
@@ -18,7 +18,7 @@ class MRNs(_BaseCondition):
 
     def __init__(
         self,
-        mrns: Union[pd.DataFrame, Iterable[str]] = None
+        mrns: Union[pd.DataFrame, Iterable[str]]
     ):
         """
         Args:
@@ -28,16 +28,20 @@ class MRNs(_BaseCondition):
 
         if isinstance(mrns, pd.DataFrame):
             df = df.append(mrns)
+            df['age_in_days'] = df.age_in_days.astype(float)
+            df['medical_record_number'] = df.medical_record_number.astype(str)
         elif isinstance(mrns, Iterable):
             df.medical_record_number = df.medical_record_number.append(
                 pd.Series(mrns))
 
-        self._data = df.sort_values(OCCURRENCE_INDEX)
+        self._data = df[OCCURRENCE_INDEX].sort_values(OCCURRENCE_INDEX)
         self._mrns = set(self._data.medical_record_number)
 
-    def _fetch_data(self,
-                    included_mrns: Optional[Set] = None,
-                    limit: Optional[int] = None):
+    def _fetch_data(
+        self,
+        included_mrns: Optional[Set] = None,
+        limit: Optional[int] = None
+    ):
         """
         Fetches the data defined with ``.data_columns`` for each patient
         defined by this condition and via ``included_mrns`` from the results of

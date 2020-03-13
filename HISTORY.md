@@ -1,5 +1,12 @@
 # History
 
+## 2.0.0 - March 10, 2020
+
+* Fixes a multitude of bugs and simplifies interfaces
+* Adds time series extraction functionality and cohort persistence
+* Refactors the configuration
+* Removes unused functionality, e.g. dockerization
+
 ## 1.0.1 - December 10, 2019
 
 * Fixes the metadata conditions for tobacco and alcohol use

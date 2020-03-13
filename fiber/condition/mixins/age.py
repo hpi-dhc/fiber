@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import Optional
 
+import fiber
 from fiber.condition.base import _BaseCondition
 
 
@@ -12,6 +13,9 @@ class AgeMixin(ABC):
 
     def _create_clause(self):
         clause = super()._create_clause()
+
+        if fiber.config.MIN_DAYS_FILTER_ACTIVE:
+            clause &= self.base_table.AGE_IN_DAYS > 0
 
         for a in self._attrs['age_conditions']:
             if a['min_days']:

@@ -48,6 +48,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+*.test-file
+
 
 # Translations
 *.mo

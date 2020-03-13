@@ -112,6 +112,16 @@ class _DatabaseCondition(_BaseCondition):
         raise NotImplementedError
 
     @property
+    def age_column(self):
+        """
+        Must be set by subclasses.
+
+        This is used to specify the column in the result table of
+        ``._create_query()`` which is holding the age in days.
+        """
+        raise NotImplementedError
+
+    @property
     def data_columns(self):
         """
         Returns columns which are in the result table of
@@ -307,7 +317,7 @@ class _DatabaseCondition(_BaseCondition):
             return f'{self.__class__.__name__}: {len(self.get_mrns())} mrns'
         else:
             clause = (
-                compile_sqla(self.clause, self.engine) if fiber.VERBOSE
+                compile_sqla(self.clause, self.engine) if fiber.config.VERBOSE
                 else '...'
             )
             return (

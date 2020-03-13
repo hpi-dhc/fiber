@@ -32,7 +32,11 @@ class LabValue(AgeMixin, ComparisonMixin, _DatabaseCondition):
         epic_lab.NUMERIC_VALUE,
         epic_lab.unit_of_measurement
     ]
+
     mrn_column = epic_lab.MEDICAL_RECORD_NUMBER
+    age_column = epic_lab.AGE_IN_DAYS
+    code_column = epic_lab.TEST_CODE
+    description_column = epic_lab.TEST_NAME
 
     def __init__(
         self,
@@ -62,7 +66,7 @@ class LabValue(AgeMixin, ComparisonMixin, _DatabaseCondition):
         clause = super()._create_clause()
         if self._attrs['name']:
             clause &= _case_insensitive_like(
-                epic_lab.TEST_NAME, self._attrs['name'])
+                self.description_column, self._attrs['name'])
         if self._attrs['abnormal'] is not None:
             clause &= (
                 epic_lab.ABNORMAL_FLAG == 'Y' if self._attrs['abnormal']
@@ -86,12 +90,14 @@ class LabValue(AgeMixin, ComparisonMixin, _DatabaseCondition):
         """
         df = super()._fetch_data(included_mrns, limit=limit)
 
-        df['abnormal_flag'] = pd.to_numeric(df.abnormal_flag == 'Y')
-
-        df['test_name'] = df['test_name'].astype('category')
-        df['result_flag'] = df['result_flag'].astype(
-            'category'
-        )
+        if 'abnormal_flag' in df.columns:
+            df['abnormal_flag'] = pd.to_numeric(df.abnormal_flag == 'Y')
+        if 'test_name' in df.columns:
+            df['test_name'] = df['test_name'].astype('category')
+        if 'result_flag' in df.columns:
+            df['result_flag'] = df['result_flag'].astype(
+                'category'
+            )
         return df
 
     @property
