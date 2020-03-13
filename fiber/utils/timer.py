@@ -42,7 +42,7 @@ class Timer:
             reference to timer-object
         """
         self.end = time.time()
-        if self.name and fiber.VERBOSE:
+        if self.name and fiber.config.VERBOSE:
             print(f'{self.name} time: {self.elapsed:.2f}s')
 
     def __repr__(self):

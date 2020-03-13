@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from fiber import OCCURRENCE_INDEX
+from fiber.config import OCCURRENCE_INDEX
 from fiber.dataframe.clipping import time_window_clip
 from fiber.dataframe.helpers import get_name_for_interval
 

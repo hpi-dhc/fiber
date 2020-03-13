@@ -28,13 +28,14 @@ class Material(_FactCondition):
     dimensions = {'MATERIAL'}
     d_table = fd_mat
     code_column = fd_mat.CONTEXT_MATERIAL_CODE
+    context_column = d_table.CONTEXT_NAME
     category_column = fd_mat.MATERIAL_TYPE
     description_column = fd_mat.MATERIAL_NAME
 
     _default_columns = [
         d_pers.MEDICAL_RECORD_NUMBER,
         fact.AGE_IN_DAYS,
-        d_table.CONTEXT_NAME,
+        context_column,
         code_column
     ]
 

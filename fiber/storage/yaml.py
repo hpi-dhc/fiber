@@ -4,8 +4,8 @@ from typing import List, Optional
 import pandas as pd
 import yaml
 
-from fiber import DEFAULT_STORE_FILE_PATH
 from fiber.condition import _DatabaseCondition
+from fiber.config import DEFAULT_STORE_FILE_PATH
 
 
 def _open_store(condition_class: _DatabaseCondition, file_path: str):

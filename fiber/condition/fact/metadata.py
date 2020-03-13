@@ -79,6 +79,8 @@ class AlcoholUse(MetaData):
     combine SQL Statements that shall be performed on the FACT-Table with
     dimension 'METADATA' and name 'Alcohol use'.
     """
+    description_column = fact.VALUE
+
     def __init__(self, **kwargs):
         """
         Args:
@@ -95,6 +97,7 @@ class TobaccoUse(MetaData):
     dimension 'METADATA' and names mapping to tobacco use, now or
     sometimes in the past, with name 'Tobacco Use'.
     """
+    description_column = fact.VALUE
 
     # Inheriting from str and Enum enables json serialization
     class Type(str, Enum):
@@ -180,12 +183,10 @@ class TobaccoUse(MetaData):
         df = super()._fetch_data(included_mrns, limit=limit)
         if self._attrs['map_values']:
             df['value'] = (
-                df.value
-                .map({
+                df.value.map({
                     label: cat for cat, labels in self.MAPPING.items()
                     for label in labels
-                })
-                .astype(pd.api.types.CategoricalDtype(self.Type))
+                }).astype(pd.api.types.CategoricalDtype(self.Type))
             )
         return df
 
@@ -196,6 +197,8 @@ class DrugUse(MetaData):
     combine SQL Statements that shall be performed on the FACT-Table with
     dimension 'METADATA' and name 'Drug Use'.
     """
+    description_column = fact.VALUE
+
     def __init__(self, **kwargs):
         """
         Args:

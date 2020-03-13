@@ -17,22 +17,35 @@ def get_name_for_interval(name: str, time_interval: Union[List, Tuple]):
     return f'{name}_from_{start}_to_{end}'
 
 
-def create_id_column(cond_cls, df):
+def create_id_column(condition, df):
     """
     Helper function to create combined column name from taxonomy name and code.
+    Additionally, also works with only the description column.
 
     Example:
-        - cond_cls: Diagnosis
+        - condition: Diagnosis
         - df with columns:
             - context_name: 'ICD-9'
             - code: '584.9'
     -> Diagnosis__ICD-9__584.9
     """
-    code_column = [x for x in df.columns if x.endswith('_code')][0]
-    df['code'] = (
-        cond_cls.__class__.__name__
-        + '__' + df['context_name']
-        + '__' + df[code_column]
-    ).astype('category')
-    del df['context_name']
-    del df[code_column]
+    if all(k in condition._attrs.keys() for k in ['code', 'context']):
+        if not condition._attrs['description']:
+            code_column = condition.code_column.name.lower()
+            context_column = condition.context_column.name.lower()
+
+            df['description'] = (
+                condition.__class__.__name__
+                + '__' + df[context_column]
+                + '__' + df[code_column]
+            )
+            del df[context_column]
+            del df[code_column]
+            return
+
+    description_column = condition.description_column.name.lower()
+    df['description'] = [
+        f'{condition.__class__.__name__}__{g}'
+        for g in df[description_column]
+    ]
+    del df[description_column]
