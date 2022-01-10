@@ -10,7 +10,7 @@ The fiber package.
 From source:
 
 ```
-git clone https://gitlab.hpi.de/fiber/fiber && \
+git clone https://github.com/hpi-dhc/fiber && \
 cd fiber && \
 pip install -e .
 ```
